@@ -152,7 +152,7 @@ export default function QuotesPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      <p>Criado em: {new Date(quote.created_at).toLocaleDateString("pt-BR")}</p>
+                      <p>Criado em: {quote.created_at ? new Date(quote.created_at).toLocaleDateString("pt-BR") : "Data não disponível"}</p>
                       {quote.valid_until && <p>Válido até: {new Date(quote.valid_until).toLocaleDateString("pt-BR")}</p>}
                     </div>
                     <div className="flex items-center gap-2">

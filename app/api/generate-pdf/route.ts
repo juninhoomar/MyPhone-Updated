@@ -269,7 +269,7 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
         <div class="info-box">
           <div class="info-title">INFORMAÇÕES DO ORÇAMENTO</div>
           <div class="info-content">
-             <strong>Data de Emissão:</strong> ${formatDate(new Date(quote.created_at))}<br>
+             <strong>Data de Emissão:</strong> ${quote.created_at ? formatDate(new Date(quote.created_at)) : 'Data não disponível'}<br>
              <strong>Válido até:</strong> ${quote.valid_until ? formatDate(new Date(quote.valid_until)) : 'N/A'}<br>
              <strong>Status:</strong> ${quote.status || 'Pendente'}<br>
              <strong>Vendedor:</strong> Sistema MyPhone

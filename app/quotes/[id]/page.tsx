@@ -150,19 +150,19 @@ export default function QuoteDetailPage() {
             <CardContent className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-500">Nome</p>
-                <p className="text-base">{quote.customerName}</p>
+                <p className="text-base">{quote.customer_name}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Email</p>
-                <p className="text-base">{quote.customerEmail}</p>
+                <p className="text-base">{quote.customer_email}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Telefone</p>
-                <p className="text-base">{quote.customerPhone}</p>
+                <p className="text-base">{quote.customer_phone}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Forma de Pagamento</p>
-                <p className="text-base">{quote.paymentMethod}</p>
+                <p className="text-sm font-medium text-gray-500">Endereço</p>
+                <p className="text-base">{quote.customer_address || 'Não informado'}</p>
               </div>
             </CardContent>
           </Card>
@@ -175,11 +175,11 @@ export default function QuoteDetailPage() {
             <CardContent className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-500">Data de Criação</p>
-                <p className="text-base">{quote.createdAt.toLocaleDateString("pt-BR")}</p>
+                <p className="text-base">{quote.created_at ? new Date(quote.created_at).toLocaleDateString("pt-BR") : "Data não disponível"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Válido até</p>
-                <p className="text-base">{quote.validUntil.toLocaleDateString("pt-BR")}</p>
+                <p className="text-base">{quote.valid_until ? new Date(quote.valid_until).toLocaleDateString("pt-BR") : "Não definido"}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500">Total de Itens</p>
@@ -204,10 +204,10 @@ export default function QuoteDetailPage() {
                 <span className="text-sm font-medium text-gray-500">Subtotal</span>
                 <span className="text-base">{formatPrice(quote.subtotal)}</span>
               </div>
-              {quote.discount > 0 && (
+              {quote.discount_amount && quote.discount_amount > 0 && (
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-gray-500">Desconto</span>
-                  <span className="text-base text-red-600">-{formatPrice(quote.discount)}</span>
+                  <span className="text-base text-red-600">-{formatPrice(quote.discount_amount)}</span>
                 </div>
               )}
               <div className="border-t pt-3">
@@ -263,8 +263,8 @@ export default function QuoteDetailPage() {
                         <p className="text-sm text-gray-500">{item.product.model}</p>
                       </td>
                       <td className="py-3 px-4 text-center">{item.quantity}</td>
-                      <td className="py-3 px-4 text-right">{formatPrice(item.unitPrice)}</td>
-                      <td className="py-3 px-4 text-right font-medium">{formatPrice(item.totalPrice)}</td>
+                      <td className="py-3 px-4 text-right">{formatPrice(item.unit_price)}</td>
+                      <td className="py-3 px-4 text-right font-medium">{formatPrice(item.total_price)}</td>
                     </tr>
                   ))}
                 </tbody>
