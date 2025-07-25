@@ -31,7 +31,7 @@ export function ProductFilters(props: ProductFiltersProps) {
   // Sempre trabalhe com um objeto de filtros seguro
   const { filters, onFiltersChange, brands, totalProducts, filteredCount } = props
   const safeFilters = withDefaultPriceRange(filters)
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(false)
 
   const updateFilter = (key: keyof ProductFiltersType, value: any) => {
     onFiltersChange(withDefaultPriceRange({ ...safeFilters, [key]: value }))
