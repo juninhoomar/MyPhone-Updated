@@ -19,7 +19,7 @@ export function useProducts() {
   })
 
   // Função para converter produto do banco para o tipo Product
-  const convertDatabaseProduct = (dbProduct: DatabaseProduct): Product => {
+  const convertDatabaseProduct = (dbProduct: any): Product => {
     return {
       id: dbProduct.id,
       name: dbProduct.name,
@@ -27,12 +27,10 @@ export function useProducts() {
       model: dbProduct.model,
       category: dbProduct.category as any, // Assumindo que as categorias no banco são válidas
       price: dbProduct.price,
-      promotionalPrice: dbProduct.original_price && dbProduct.discount_percentage > 0 
-        ? dbProduct.price * (1 - dbProduct.discount_percentage / 100)
-        : undefined,
+      promotionalPrice: dbProduct.promotional_price || undefined,
       description: dbProduct.description || "",
       specifications: dbProduct.specifications || [],
-      images: dbProduct.images,
+      images: dbProduct.images || [],
       status: dbProduct.is_active ? "available" : "out_of_stock",
       createdAt: new Date(dbProduct.created_at),
       updatedAt: new Date(dbProduct.updated_at),
@@ -80,7 +78,7 @@ export function useProducts() {
           model: productData.model,
           category: productData.category,
           price: productData.price,
-          original_price: productData.promotionalPrice ? productData.price : null,
+          promotional_price: productData.promotionalPrice || null,
           discount_percentage: productData.promotionalPrice ? 
             Math.round((1 - productData.promotionalPrice / productData.price) * 100) : 0,
           description: productData.description,
@@ -116,7 +114,7 @@ export function useProducts() {
           model: updates.model,
           category: updates.category,
           price: updates.price,
-          original_price: updates.promotionalPrice ? updates.price : null,
+          promotional_price: updates.promotionalPrice || null,
           discount_percentage: updates.promotionalPrice ? 
             Math.round((1 - updates.promotionalPrice / updates.price!) * 100) : 0,
           description: updates.description,

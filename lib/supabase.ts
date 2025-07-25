@@ -13,7 +13,7 @@ export interface DatabaseProduct {
   model: string
   category: string
   price: number
-  original_price?: number
+  promotional_price?: number
   discount_percentage: number
   subcategory?: string
   description?: string
