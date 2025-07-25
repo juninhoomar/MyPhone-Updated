@@ -93,11 +93,14 @@ export async function POST(request: NextRequest) {
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage'
           ],
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
       executablePath: process.env.NODE_ENV === 'production'
         ? await chromium.executablePath()
         : puppeteer.executablePath(),
-      headless: process.env.NODE_ENV === 'production' ? chromium.headless : true
+      headless: true
     })
 
     const page = await browser.newPage()
