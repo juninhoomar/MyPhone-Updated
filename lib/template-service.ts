@@ -55,7 +55,7 @@ export class TemplateService {
           prompt: template.prompt,
           variables: template.variables,
           thumbnail: template.thumbnail,
-          is_custom: (template as any).isCustom || true
+          is_custom: template.isCustom || true
         })
         .select()
         .single()
@@ -83,7 +83,7 @@ export class TemplateService {
       if (updates.prompt !== undefined) updateData.prompt = updates.prompt
       if (updates.variables !== undefined) updateData.variables = updates.variables
       if (updates.thumbnail !== undefined) updateData.thumbnail = updates.thumbnail
-      if ((updates as any).isCustom !== undefined) updateData.is_custom = (updates as any).isCustom
+      if (updates.isCustom !== undefined) updateData.is_custom = updates.isCustom
       
       updateData.updated_at = new Date().toISOString()
 
@@ -178,7 +178,8 @@ export class TemplateService {
       prompt: dbTemplate.prompt,
       variables: dbTemplate.variables || [],
       thumbnail: dbTemplate.thumbnail || undefined,
-      isCustom: dbTemplate.is_custom || false
+      isCustom: dbTemplate.is_custom || false,
+      createdAt: dbTemplate.created_at ? new Date(dbTemplate.created_at) : undefined
     }
   }
 }

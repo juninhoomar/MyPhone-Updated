@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { TemplateService } from "@/lib/template-service"
-import { Template } from "@/types/template"
+import { Template, CustomTemplate } from "@/types/template"
 import { useAdGenerator } from "@/hooks/use-ad-generator"
 import { useAppSettings } from "@/hooks/use-app-settings"
 import { TemplateSelector } from "@/components/template-selector"
@@ -188,7 +188,7 @@ export default function PromptsPage() {
           ) : (
             <TemplateSelector
               templates={templates.filter(t => !t.isCustom)}
-              customTemplates={templates.filter(t => t.isCustom)}
+              customTemplates={templates.filter(t => t.isCustom) as CustomTemplate[]}
               selectedTemplate={selectedTemplate}
               onSelectTemplate={handleSelectTemplate}
               onCreateTemplate={handleCreateTemplate}

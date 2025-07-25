@@ -188,7 +188,7 @@ export function TemplateSelector({
         template={editingTemplate}
         open={!!editingTemplate}
         onOpenChange={(open) => !open && setEditingTemplate(null)}
-        onUpdateTemplate={onUpdateTemplate}
+        onUpdateTemplate={onUpdateTemplate!}
       />
     </div>
   )

@@ -17,6 +17,8 @@ export interface Template {
   prompt: string
   variables: TemplateVariable[]
   thumbnail?: string
+  isCustom?: boolean
+  createdAt?: Date
 }
 
 export interface GeneratedPost {
