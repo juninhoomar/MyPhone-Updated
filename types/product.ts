@@ -3,6 +3,11 @@ export interface ProductSpecification {
   value: string
 }
 
+export interface ProductColor {
+  name: string
+  hex: string
+}
+
 export interface Product {
   id: string
   name: string
@@ -14,6 +19,9 @@ export interface Product {
   description: string
   specifications: ProductSpecification[]
   images: string[]
+  colors: ProductColor[]
+  sku?: string
+  stockQuantity: number
   status: "available" | "out_of_stock" | "discontinued"
   createdAt: Date
   updatedAt: Date

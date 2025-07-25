@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Sparkles, FileText, Settings, Menu, Home, Plus, Package } from "lucide-react"
 
 const navigation = [
@@ -61,6 +61,9 @@ export function Navigation() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-64">
+              <SheetHeader>
+                <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+              </SheetHeader>
               <div className="flex flex-col space-y-4 mt-8">
                 <Link href="/" className="flex items-center space-x-2 mb-6">
                   <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">

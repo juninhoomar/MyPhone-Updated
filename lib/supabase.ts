@@ -19,6 +19,8 @@ export interface DatabaseProduct {
   description?: string
   specifications?: any[]
   images: string[]
+  colors?: any[]
+  sku?: string
   stock_quantity: number
   is_active: boolean
   is_featured: boolean

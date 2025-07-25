@@ -1,12 +1,12 @@
 "use client"
 
 import React, { useState } from "react"
-import type { Product } from "@/types/product"
+import type { Product, ProductColor } from "@/types/product"
 import { formatPrice } from "@/utils/format-price"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, ShoppingCart } from "lucide-react"
+import { Plus, ShoppingCart, Palette } from "lucide-react"
 import { useQuoteCart } from "@/contexts/quote-cart-context"
 import { ProductModal } from "@/components/product-modal"
 
@@ -20,6 +20,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleAddToQuote = (e: React.MouseEvent) => {
     e.stopPropagation() // Evita abrir o modal quando clicar no botão
+    
+    // Se o produto tem cores, abre o modal para seleção
+    if (product.colors && product.colors.length > 0) {
+      setIsModalOpen(true)
+      return
+    }
+    
     addToCart(product, 1)
     // Você pode adicionar um toast aqui para feedback
   }
@@ -32,6 +39,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const hasDiscount = product.promotionalPrice && product.promotionalPrice < product.price
   const isProductInCart = isInCart(product.id)
   const cartQuantity = getItemQuantity(product.id)
+  const hasColors = product.colors && product.colors.length > 0
 
   return (
     <>
@@ -78,6 +86,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <p className="text-xs text-gray-600 mb-3 line-clamp-2">
               {product.description}
             </p>
+            
+            {/* Cores disponíveis */}
+            {hasColors && (
+              <div className="mb-3">
+                <div className="flex items-center gap-1 mb-2">
+                  <Palette className="w-3 h-3 text-gray-500" />
+                  <span className="text-xs text-gray-500">Cores disponíveis:</span>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {product.colors.slice(0, 4).map((color, index) => (
+                    <div
+                      key={index}
+                      className="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
+                      style={{ backgroundColor: color.hex }}
+                      title={color.name}
+                    />
+                  ))}
+                  {product.colors.length > 4 && (
+                    <div className="w-4 h-4 rounded-full border border-gray-300 bg-gray-100 flex items-center justify-center">
+                      <span className="text-xs text-gray-600">+{product.colors.length - 4}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="space-y-3">
@@ -107,7 +140,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               ) : (
                 <>
                   <Plus className="w-4 h-4 mr-2" />
-                  Adicionar
+                  {hasColors ? 'Selecionar' : 'Adicionar'}
                 </>
               )}
             </Button>

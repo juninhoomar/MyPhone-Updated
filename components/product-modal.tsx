@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
-import { Plus, Minus, ShoppingCart, Star, Check, X } from "lucide-react"
-import type { Product } from "@/types/product"
+import { Label } from "@/components/ui/label"
+import { Plus, Minus, ShoppingCart, Star, Check, X, Palette } from "lucide-react"
+import type { Product, ProductColor } from "@/types/product"
 import { formatPrice } from "@/utils/format-price"
 import { useQuoteCart } from "@/contexts/quote-cart-context"
 
@@ -21,6 +22,7 @@ interface ProductModalProps {
 export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [quantity, setQuantity] = useState(1)
+  const [selectedColor, setSelectedColor] = useState<ProductColor | null>(null)
   const { addToCart, isInCart, getItemQuantity } = useQuoteCart()
 
   if (!product) return null
@@ -32,15 +34,28 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
     : 0
 
   const handleAddToQuote = () => {
-    addToCart(product, quantity)
+    if (product.colors.length > 0 && !selectedColor) {
+      alert('Por favor, selecione uma cor antes de adicionar ao orçamento.')
+      return
+    }
+    addToCart(product, quantity, selectedColor || undefined)
     // Você pode adicionar um toast aqui para feedback
   }
 
   const incrementQuantity = () => setQuantity(prev => prev + 1)
   const decrementQuantity = () => setQuantity(prev => Math.max(1, prev - 1))
 
-  const isProductInCart = isInCart(product.id)
-  const cartQuantity = getItemQuantity(product.id)
+  const isProductInCart = isInCart(product.id, selectedColor?.name)
+  const cartQuantity = getItemQuantity(product.id, selectedColor?.name)
+
+  // Reset selected color when product changes
+  React.useEffect(() => {
+    if (product && product.colors.length > 0) {
+      setSelectedColor(product.colors[0])
+    } else {
+      setSelectedColor(null)
+    }
+  }, [product])
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -128,6 +143,35 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
               <h3 className="font-semibold mb-2">Descrição</h3>
               <p className="text-gray-600 leading-relaxed">{product.description}</p>
             </div>
+
+            {/* Cores Disponíveis */}
+            {product.colors && product.colors.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Palette className="h-4 w-4" />
+                  Cores Disponíveis
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {product.colors.map((color, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedColor(color)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${
+                        selectedColor?.name === color.name
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      <span className="text-sm font-medium">{color.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Especificações */}
             {product.specifications && product.specifications.length > 0 && (

@@ -31,6 +31,9 @@ export function useProducts() {
       description: dbProduct.description || "",
       specifications: dbProduct.specifications || [],
       images: dbProduct.images || [],
+      colors: dbProduct.colors || [],
+      sku: dbProduct.sku || undefined,
+      stockQuantity: dbProduct.stock_quantity || 0,
       status: dbProduct.is_active ? "available" : "out_of_stock",
       createdAt: new Date(dbProduct.created_at),
       updatedAt: new Date(dbProduct.updated_at),
@@ -82,11 +85,13 @@ export function useProducts() {
           discount_percentage: productData.promotionalPrice ? 
             Math.round((1 - productData.promotionalPrice / productData.price) * 100) : 0,
           description: productData.description,
-          specifications: productData.specifications,
-          images: productData.images,
+          specifications: productData.specifications || [],
+          images: productData.images || [],
+          colors: productData.colors || [],
+          sku: productData.sku || null,
+          stock_quantity: productData.stockQuantity || 0,
           is_active: productData.status === "available",
           is_featured: false,
-          stock_quantity: 10, // valor padrão
           rating: 0,
           review_count: 0
         })
@@ -99,8 +104,9 @@ export function useProducts() {
       setProducts(prev => [newProduct, ...prev])
       return newProduct
     } catch (err) {
-      console.error('Erro ao adicionar produto:', err)
-      throw err
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao adicionar produto'
+      console.error('Erro ao adicionar produto:', errorMessage, err)
+      throw new Error(errorMessage)
     }
   }
 
@@ -118,8 +124,11 @@ export function useProducts() {
           discount_percentage: updates.promotionalPrice ? 
             Math.round((1 - updates.promotionalPrice / updates.price!) * 100) : 0,
           description: updates.description,
-          specifications: updates.specifications,
-          images: updates.images,
+          specifications: updates.specifications || [],
+          images: updates.images || [],
+          colors: updates.colors || [],
+          sku: updates.sku || null,
+          stock_quantity: updates.stockQuantity || 0,
           is_active: updates.status === "available",
           updated_at: new Date().toISOString()
         })
@@ -136,8 +145,9 @@ export function useProducts() {
         )
       )
     } catch (err) {
-      console.error('Erro ao atualizar produto:', err)
-      throw err
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao atualizar produto'
+      console.error('Erro ao atualizar produto:', errorMessage, err)
+      throw new Error(errorMessage)
     }
   }
 
@@ -152,8 +162,9 @@ export function useProducts() {
       
       setProducts(prev => prev.filter(product => product.id !== id))
     } catch (err) {
-      console.error('Erro ao deletar produto:', err)
-      throw err
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao deletar produto'
+      console.error('Erro ao deletar produto:', errorMessage, err)
+      throw new Error(errorMessage)
     }
   }
 
@@ -171,8 +182,9 @@ export function useProducts() {
         
         return await addProduct(duplicatedData)
       } catch (err) {
-        console.error('Erro ao duplicar produto:', err)
-        throw err
+        const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido ao duplicar produto'
+        console.error('Erro ao duplicar produto:', errorMessage, err)
+        throw new Error(errorMessage)
       }
     }
   }

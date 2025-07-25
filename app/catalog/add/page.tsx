@@ -29,8 +29,9 @@ export default function AddProductPage() {
       setShowForm(false)
       setEditingProduct(null)
     } catch (error) {
-      console.error('Erro ao salvar produto:', error)
-      // Aqui você pode adicionar um toast de erro
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao salvar produto'
+      console.error('Erro ao salvar produto:', errorMessage, error)
+      alert(`Erro ao salvar produto: ${errorMessage}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -46,7 +47,9 @@ export default function AddProductPage() {
       try {
         await deleteProduct(productId)
       } catch (error) {
-        console.error('Erro ao excluir produto:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao excluir produto'
+        console.error('Erro ao excluir produto:', errorMessage, error)
+        alert(`Erro ao excluir produto: ${errorMessage}`)
       }
     }
   }

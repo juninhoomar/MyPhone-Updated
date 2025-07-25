@@ -130,17 +130,17 @@ export function SettingsDialog({ settings, onUpdateSettings, isLoading = false }
             <Label htmlFor="imageSize">Tamanho da Imagem</Label>
             <Select
               value={settings.defaultImageSize}
-              onValueChange={(value: "256x256" | "512x512" | "1024x1024") =>
-                onUpdateSettings({ defaultImageSize: value })
+              onValueChange={(value) =>
+                onUpdateSettings({ defaultImageSize: value as "1024x1024" | "1024x1536" | "1536x1024" })
               }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="256x256">256x256 (Rápido)</SelectItem>
-                <SelectItem value="512x512">512x512 (Médio)</SelectItem>
-                <SelectItem value="1024x1024">1024x1024 (Alta Qualidade)</SelectItem>
+                <SelectItem value="1024x1024">1024x1024 (Quadrado)</SelectItem>
+                <SelectItem value="1024x1536">1024x1536 (Retrato)</SelectItem>
+                <SelectItem value="1536x1024">1536x1024 (Paisagem)</SelectItem>
               </SelectContent>
             </Select>
           </div>

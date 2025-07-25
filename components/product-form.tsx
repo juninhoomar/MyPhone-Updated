@@ -9,10 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Plus, X, Upload, Trash2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Plus, X, Upload, Trash2, Palette } from "lucide-react"
 import Image from "next/image"
-import type { Product, ProductSpecification, ProductCategory } from "@/types/product"
+import type { Product, ProductSpecification, ProductCategory, ProductColor } from "@/types/product"
 import { PRODUCT_CATEGORIES } from "@/types/product"
+import { formatPriceInput, parsePriceInput } from "@/utils/format-price"
+import { uploadMultipleProductImages, deleteProductImage } from "@/lib/image-upload"
 
 interface ProductFormProps {
   onSubmit: (product: Omit<Product, "id" | "createdAt" | "updatedAt">) => void
@@ -25,16 +28,23 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
     name: initialData?.name || "",
     brand: initialData?.brand || "",
     model: initialData?.model || "",
+    sku: initialData?.sku || "",
     category: initialData?.category || ("smartphone" as ProductCategory),
     price: initialData?.price || 0,
     promotionalPrice: initialData?.promotionalPrice || 0,
+    stockQuantity: initialData?.stockQuantity || 0,
     description: initialData?.description || "",
     status: initialData?.status || ("available" as const),
   })
 
+  const [priceDisplay, setPriceDisplay] = useState(formatPriceInput(initialData?.price || 0))
+  const [promotionalPriceDisplay, setPromotionalPriceDisplay] = useState(formatPriceInput(initialData?.promotionalPrice || 0))
+
   const [specifications, setSpecifications] = useState<ProductSpecification[]>(initialData?.specifications || [])
   const [images, setImages] = useState<string[]>(initialData?.images || [])
+  const [colors, setColors] = useState<ProductColor[]>(initialData?.colors || [])
   const [newSpec, setNewSpec] = useState({ name: "", value: "" })
+  const [newColor, setNewColor] = useState({ name: "", hex: "#000000" })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleInputChange = (field: string, value: any) => {
@@ -52,17 +62,68 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
     setSpecifications((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (files) {
-      Array.from(files).forEach((file) => {
-        const url = URL.createObjectURL(file)
-        setImages((prev) => [...prev, url])
-      })
+  const addColor = () => {
+    if (newColor.name && newColor.hex) {
+      setColors((prev) => [...prev, { ...newColor }])
+      setNewColor({ name: "", hex: "#000000" })
     }
   }
 
-  const removeImage = (index: number) => {
+  const removeColor = (index: number) => {
+    setColors((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handlePriceChange = (value: string, field: 'price' | 'promotionalPrice') => {
+    // Permitir apenas números, vírgulas e pontos
+    const cleanValue = value.replace(/[^0-9.,]/g, '')
+    
+    if (field === 'price') {
+      setPriceDisplay(cleanValue)
+      const numericValue = parsePriceInput(cleanValue)
+      handleInputChange('price', numericValue)
+    } else {
+      setPromotionalPriceDisplay(cleanValue)
+      const numericValue = parsePriceInput(cleanValue)
+      handleInputChange('promotionalPrice', numericValue)
+    }
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      try {
+        // Gerar um ID temporário para o produto se não existir
+        const tempProductId = formData.name ? formData.name.replace(/\s+/g, '-').toLowerCase() : 'temp-' + Date.now()
+        const uploadResults = await uploadMultipleProductImages(Array.from(files), tempProductId)
+        const uploadedUrls = uploadResults.map(result => result.url)
+        setImages((prev) => [...prev, ...uploadedUrls])
+      } catch (error) {
+        console.error('Erro ao fazer upload das imagens:', error)
+        // Mostrar mensagem de erro mais detalhada
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
+        alert(`Erro no upload: ${errorMessage}. As imagens serão exibidas apenas localmente.`)
+        // Fallback para preview local em caso de erro
+        Array.from(files).forEach((file) => {
+          const url = URL.createObjectURL(file)
+          setImages((prev) => [...prev, url])
+        })
+      }
+    }
+  }
+
+  const removeImage = async (index: number) => {
+    const imageUrl = images[index]
+    try {
+      if (imageUrl && !imageUrl.startsWith('blob:')) {
+        // Extrair o path da URL para deletar do storage
+        const urlParts = imageUrl.split('/storage/v1/object/public/product-images/')
+        if (urlParts.length > 1) {
+          await deleteProductImage(urlParts[1])
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao deletar imagem:', error)
+    }
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
@@ -73,6 +134,7 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
       ...formData,
       specifications,
       images,
+      colors,
       promotionalPrice: formData.promotionalPrice || undefined,
     }
 
@@ -123,6 +185,17 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="sku">SKU (Código do Produto) *</Label>
+              <Input
+                id="sku"
+                value={formData.sku}
+                onChange={(e) => handleInputChange("sku", e.target.value)}
+                placeholder="Ex: IPH15PM-256-BLK"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="category">Categoria *</Label>
               <Select
                 value={formData.category}
@@ -168,28 +241,39 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
               <Label htmlFor="price">Preço Original (R$) *</Label>
               <Input
                 id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => handleInputChange("price", Number.parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
+                type="text"
+                value={priceDisplay}
+                onChange={(e) => handlePriceChange(e.target.value, 'price')}
+                placeholder="1.999,99"
                 required
               />
+              <p className="text-xs text-muted-foreground">Use o formato brasileiro: 1.999,99</p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
               <Input
                 id="promotionalPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.promotionalPrice}
-                onChange={(e) => handleInputChange("promotionalPrice", Number.parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
+                type="text"
+                value={promotionalPriceDisplay}
+                onChange={(e) => handlePriceChange(e.target.value, 'promotionalPrice')}
+                placeholder="1.799,99"
               />
               <p className="text-xs text-muted-foreground">Deixe em branco se não houver promoção</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="stockQuantity">Quantidade em Estoque *</Label>
+              <Input
+                id="stockQuantity"
+                type="number"
+                min="0"
+                value={formData.stockQuantity}
+                onChange={(e) => handleInputChange("stockQuantity", parseInt(e.target.value) || 0)}
+                placeholder="100"
+                required
+              />
+              <p className="text-xs text-muted-foreground">Quantidade disponível para venda</p>
             </div>
 
             {formData.promotionalPrice > 0 && formData.promotionalPrice < formData.price && (
@@ -253,6 +337,73 @@ export function ProductForm({ onSubmit, initialData, isEditing = false }: Produc
                       <span className="font-medium">{spec.name}:</span> {spec.value}
                     </div>
                     <Button type="button" variant="ghost" size="sm" onClick={() => removeSpecification(index)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Colors */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="w-5 h-5" />
+            Cores Disponíveis
+          </CardTitle>
+          <CardDescription>Adicione as cores disponíveis para este produto</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input
+              placeholder="Nome da cor"
+              value={newColor.name}
+              onChange={(e) => setNewColor((prev) => ({ ...prev, name: e.target.value }))}
+            />
+            <div className="space-y-2">
+              <Label htmlFor="colorPicker">Cor</Label>
+              <div className="flex gap-2">
+                <input
+                  id="colorPicker"
+                  type="color"
+                  value={newColor.hex}
+                  onChange={(e) => setNewColor((prev) => ({ ...prev, hex: e.target.value }))}
+                  className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                />
+                <Input
+                  value={newColor.hex}
+                  onChange={(e) => setNewColor((prev) => ({ ...prev, hex: e.target.value }))}
+                  placeholder="#000000"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <Button type="button" onClick={addColor} disabled={!newColor.name || !newColor.hex} className="w-full">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Cor
+              </Button>
+            </div>
+          </div>
+
+          {colors.length > 0 && (
+            <div className="space-y-2">
+              <Label>Cores Adicionadas:</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {colors.map((color, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-6 h-6 rounded-full border border-gray-300" 
+                        style={{ backgroundColor: color.hex }}
+                      />
+                      <span className="font-medium">{color.name}</span>
+                      <Badge variant="outline" className="text-xs">{color.hex}</Badge>
+                    </div>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeColor(index)}>
                       <X className="w-4 h-4" />
                     </Button>
                   </div>

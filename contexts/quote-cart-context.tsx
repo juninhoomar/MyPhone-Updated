@@ -1,11 +1,12 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react"
-import type { Product } from "@/types/product"
+import type { Product, ProductColor } from "@/types/product"
 
 export interface QuoteCartItem {
   product: Product
   quantity: number
+  selectedColor?: ProductColor
   addedAt: Date
 }
 
@@ -17,13 +18,13 @@ export interface QuoteCart {
 
 interface QuoteCartContextType {
   cart: QuoteCartItem[]
-  addToCart: (product: Product, quantity?: number) => void
-  removeFromCart: (productId: string) => void
-  updateQuantity: (productId: string, quantity: number) => void
+  addToCart: (product: Product, quantity?: number, selectedColor?: ProductColor) => void
+  removeFromCart: (productId: string, colorName?: string) => void
+  updateQuantity: (productId: string, quantity: number, colorName?: string) => void
   clearCart: () => void
   getCartSummary: () => QuoteCart
-  isInCart: (productId: string) => boolean
-  getItemQuantity: (productId: string) => number
+  isInCart: (productId: string, colorName?: string) => boolean
+  getItemQuantity: (productId: string, colorName?: string) => number
 }
 
 const QuoteCartContext = createContext<QuoteCartContextType | undefined>(undefined)
@@ -35,12 +36,15 @@ interface QuoteCartProviderProps {
 export function QuoteCartProvider({ children }: QuoteCartProviderProps) {
   const [cart, setCart] = useState<QuoteCartItem[]>([])
 
-  const addToCart = useCallback((product: Product, quantity: number = 1) => {
+  const addToCart = useCallback((product: Product, quantity: number = 1, selectedColor?: ProductColor) => {
     setCart(prevCart => {
-      const existingItemIndex = prevCart.findIndex(item => item.product.id === product.id)
+      const existingItemIndex = prevCart.findIndex(item => 
+        item.product.id === product.id && 
+        item.selectedColor?.name === selectedColor?.name
+      )
       
       if (existingItemIndex >= 0) {
-        // Se o produto já existe, atualiza a quantidade
+        // Se o produto já existe com a mesma cor, atualiza a quantidade
         const updatedCart = [...prevCart]
         updatedCart[existingItemIndex] = {
           ...updatedCart[existingItemIndex],
@@ -48,29 +52,34 @@ export function QuoteCartProvider({ children }: QuoteCartProviderProps) {
         }
         return updatedCart
       } else {
-        // Se é um novo produto, adiciona ao carrinho
+        // Se é um novo produto ou cor diferente, adiciona ao carrinho
         return [...prevCart, {
           product,
           quantity,
+          selectedColor,
           addedAt: new Date()
         }]
       }
     })
   }, [])
 
-  const removeFromCart = useCallback((productId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.product.id !== productId))
+  const removeFromCart = useCallback((productId: string, colorName?: string) => {
+    setCart(prevCart => prevCart.filter(item => 
+      !(item.product.id === productId && 
+        (colorName ? item.selectedColor?.name === colorName : true))
+    ))
   }, [])
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number, colorName?: string) => {
     if (quantity <= 0) {
-      removeFromCart(productId)
+      removeFromCart(productId, colorName)
       return
     }
     
     setCart(prevCart => 
       prevCart.map(item => 
-        item.product.id === productId 
+        item.product.id === productId && 
+        (colorName ? item.selectedColor?.name === colorName : true)
           ? { ...item, quantity }
           : item
       )
@@ -95,12 +104,18 @@ export function QuoteCartProvider({ children }: QuoteCartProviderProps) {
     }
   }, [cart])
 
-  const isInCart = useCallback((productId: string) => {
-    return cart.some(item => item.product.id === productId)
+  const isInCart = useCallback((productId: string, colorName?: string) => {
+    return cart.some(item => 
+      item.product.id === productId && 
+      (colorName ? item.selectedColor?.name === colorName : true)
+    )
   }, [cart])
 
-  const getItemQuantity = useCallback((productId: string) => {
-    const item = cart.find(item => item.product.id === productId)
+  const getItemQuantity = useCallback((productId: string, colorName?: string) => {
+    const item = cart.find(item => 
+      item.product.id === productId && 
+      (colorName ? item.selectedColor?.name === colorName : true)
+    )
     return item?.quantity || 0
   }, [cart])
 

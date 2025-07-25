@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Trash2, ShoppingCart, Share2 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { PRODUCT_CATEGORIES } from "@/types/product"
 
@@ -110,11 +109,10 @@ export default function ProductDetailPage() {
           {/* Images */}
           <div className="space-y-4">
             <div className="aspect-square relative overflow-hidden rounded-lg border bg-white">
-              <Image
+              <img
                 src={product.images[selectedImageIndex] || "/placeholder.svg?height=500&width=500&query=produto"}
                 alt={product.name}
-                fill
-                className="object-cover"
+                className="object-cover w-full h-full"
               />
               {hasPromotion && (
                 <Badge className="absolute top-4 left-4 bg-red-500 text-white text-lg px-3 py-1">
@@ -133,11 +131,10 @@ export default function ProductDetailPage() {
                       selectedImageIndex === index ? "border-primary" : "border-gray-200"
                     }`}
                   >
-                    <Image
+                    <img
                       src={image || "/placeholder.svg"}
                       alt={`${product.name} ${index + 1}`}
-                      fill
-                      className="object-cover"
+                      className="object-cover w-full h-full"
                     />
                   </button>
                 ))}
@@ -168,7 +165,7 @@ export default function ProductDetailPage() {
                 </div>
               )}
               <div className="text-3xl font-bold text-primary">
-                R$ {displayPrice.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                R$ {(displayPrice || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </div>
             </div>
 
