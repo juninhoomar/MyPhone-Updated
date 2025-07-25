@@ -2,275 +2,226 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { ShoppingCart, FileText } from "lucide-react"
-import { useQuoteCart, type QuoteCartItem } from "@/contexts/quote-cart-context"
+import { useQuoteCart } from "@/contexts/quote-cart-context"
+import { useQuotes } from "@/hooks/use-quotes"
 import type { QuoteFormData } from "@/types/quote"
 
-interface FloatingQuoteButtonProps {
-  onQuoteGenerated?: () => void
-}
+export function FloatingQuoteButton() {
+  const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const { cart, clearCart, getCartSummary } = useQuoteCart()
+  const { createQuote } = useQuotes()
 
-export function FloatingQuoteButton({ onQuoteGenerated }: FloatingQuoteButtonProps) {
-  const { cart, getCartSummary, clearCart } = useQuoteCart()
-  const { items, totalItems, totalValue } = getCartSummary()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [formData, setFormData] = useState<QuoteFormData>({
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
-    paymentMethod: "",
+    customer_name: "",
+    customer_email: "",
+    customer_phone: "",
+    customer_address: "",
     notes: "",
-    validDays: 30,
+    discount_amount: 0,
+    discount_percentage: 0,
+    valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 dias
   })
 
-  if (totalItems === 0) {
-    return null
-  }
+  const cartSummary = getCartSummary()
 
-  const handleCreateQuote = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+    setIsLoading(true)
+
     try {
-      // Preparar dados do orçamento no formato correto
-      const quoteData = {
-        id: `quote-${Date.now()}`,
-        customerName: formData.customerName,
-        customerEmail: formData.customerEmail,
-        customerPhone: formData.customerPhone,
-        paymentMethod: formData.paymentMethod,
-        items: items.map((item: QuoteCartItem) => ({
-          product: item.product,
-          quantity: item.quantity,
-          unitPrice: item.product.promotionalPrice || item.product.price,
-          totalPrice: (item.product.promotionalPrice || item.product.price) * item.quantity
-        })),
-        subtotal: totalValue,
-        discount: 0,
-        total: totalValue,
-        status: "draft" as const,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        validUntil: new Date(Date.now() + formData.validDays * 24 * 60 * 60 * 1000),
-        notes: formData.notes
+      const quote = await createQuote(formData, cart)
+      if (quote) {
+        clearCart()
+        setIsOpen(false)
+        setFormData({
+          customer_name: "",
+          customer_email: "",
+          customer_phone: "",
+          customer_address: "",
+          notes: "",
+          discount_amount: 0,
+          discount_percentage: 0,
+          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        })
+        alert("Orçamento criado com sucesso!")
+      } else {
+        alert("Erro ao criar orçamento")
       }
-
-      // Gerar PDF
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          quoteData
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Erro ao gerar PDF')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.style.display = 'none'
-      a.href = url
-      a.download = `orcamento-${formData.customerName.replace(/\s+/g, '-')}-${Date.now()}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-      // Limpar carrinho e fechar modal
-      clearCart()
-      setIsDialogOpen(false)
-      setFormData({
-        customerName: "",
-        customerEmail: "",
-        customerPhone: "",
-        paymentMethod: "",
-        notes: "",
-        validDays: 30,
-      })
-
-      onQuoteGenerated?.()
-      alert('Orçamento gerado com sucesso!')
     } catch (error) {
-      console.error('Erro ao gerar orçamento:', error)
-      alert('Erro ao gerar orçamento')
+      console.error("Erro ao criar orçamento:", error)
+      alert("Erro ao criar orçamento")
+    } finally {
+      setIsLoading(false)
     }
   }
 
+  if (cartSummary.totalItems === 0) {
+    return null
+  }
+
   return (
-    <>
-      {/* Botão Flutuante */}
-      <div className="fixed bottom-6 right-6 z-50">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
         <Button
-          onClick={() => setIsDialogOpen(true)}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
           size="lg"
-          className="rounded-full shadow-lg hover:shadow-xl transition-all duration-200 h-14 px-6"
         >
-          <ShoppingCart className="w-5 h-5 mr-2" />
-          Finalizar Orçamento
-          <Badge 
-            variant="secondary" 
-            className="ml-2 bg-white text-primary"
-          >
-            {totalItems}
-          </Badge>
+          <div className="flex flex-col items-center">
+            <ShoppingCart className="h-6 w-6" />
+            <span className="text-xs font-bold">{cartSummary.totalItems}</span>
+          </div>
         </Button>
-      </div>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Finalizar Orçamento
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os dados do cliente para gerar o orçamento.
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal de Criação de Orçamento */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Gerar Orçamento
-            </DialogTitle>
-            <DialogDescription>
-              Preencha os dados do cliente para gerar o orçamento em PDF
-            </DialogDescription>
-          </DialogHeader>
-          
-          <form onSubmit={handleCreateQuote} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerName">Nome do Cliente *</Label>
-                <Input
-                  id="customerName"
-                  value={formData.customerName}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customerName: e.target.value }))}
-                  required
-                />
+        {/* Resumo dos produtos */}
+        <div className="border rounded-lg p-4 mb-4">
+          <h3 className="font-semibold mb-2">Produtos Selecionados</h3>
+          <div className="space-y-2 max-h-32 overflow-y-auto">
+            {cart.map((item) => (
+              <div key={item.product.id} className="flex justify-between text-sm">
+                <span>{item.product.name}</span>
+                <span>{item.quantity}x R$ {(item.product.promotionalPrice || item.product.price).toFixed(2)}</span>
               </div>
-              <div>
-                <Label htmlFor="customerEmail">Email *</Label>
-                <Input
-                  id="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customerEmail: e.target.value }))}
-                  required
-                />
-              </div>
+            ))}
+          </div>
+          <div className="border-t pt-2 mt-2">
+            <div className="flex justify-between font-semibold">
+              <span>Total:</span>
+              <span>R$ {cartSummary.totalValue.toFixed(2)}</span>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerPhone">Telefone *</Label>
-                <Input
-                  id="customerPhone"
-                  value={formData.customerPhone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, customerPhone: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => setFormData((prev) => ({ ...prev, paymentMethod: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="boleto">Boleto</SelectItem>
-                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="validDays">Válido por (dias)</Label>
-                <Select
-                  value={formData.validDays.toString()}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, validDays: Number.parseInt(value) }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 dias</SelectItem>
-                    <SelectItem value="30">30 dias</SelectItem>
-                    <SelectItem value="60">60 dias</SelectItem>
-                    <SelectItem value="90">90 dias</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                placeholder="Observações adicionais..."
-                rows={3}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer_name">Nome do Cliente *</Label>
+              <Input
+                id="customer_name"
+                value={formData.customer_name}
+                onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                required
               />
             </div>
-
-            {/* Resumo dos Produtos */}
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">Produtos Selecionados ({totalItems} {totalItems === 1 ? 'item' : 'itens'}):</h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {items.map((item: QuoteCartItem) => {
-                  const price = item.product.promotionalPrice || item.product.price
-                  return (
-                    <div key={item.product.id} className="flex justify-between items-center text-sm p-2 bg-muted/30 rounded">
-                      <div>
-                        <span className="font-medium">{item.product.name}</span>
-                        <span className="text-muted-foreground ml-2">x{item.quantity}</span>
-                      </div>
-                      <span className="font-medium">
-                        R$ {(price * item.quantity).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="border-t mt-3 pt-3 flex justify-between items-center font-semibold text-lg">
-                <span>Total Geral:</span>
-                <span className="text-primary">
-                  R$ {totalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer_email">Email</Label>
+              <Input
+                id="customer_email"
+                type="email"
+                value={formData.customer_email}
+                onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
+              />
             </div>
+          </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                <FileText className="w-4 h-4 mr-2" />
-                Gerar PDF
-              </Button>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer_phone">Telefone</Label>
+              <Input
+                id="customer_phone"
+                value={formData.customer_phone}
+                onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+              />
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-    </>
+            <div className="space-y-2">
+              <Label htmlFor="valid_until">Válido até</Label>
+              <Input
+                id="valid_until"
+                type="date"
+                value={formData.valid_until}
+                onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="customer_address">Endereço</Label>
+            <Textarea
+              id="customer_address"
+              value={formData.customer_address}
+              onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="discount_amount">Desconto (R$)</Label>
+              <Input
+                id="discount_amount"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.discount_amount}
+                onChange={(e) => setFormData({ ...formData, discount_amount: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discount_percentage">Desconto (%)</Label>
+              <Input
+                id="discount_percentage"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={formData.discount_percentage}
+                onChange={(e) => setFormData({ ...formData, discount_percentage: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Observações</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={3}
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsOpen(false)}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !formData.customer_name}
+              className="flex-1"
+            >
+              {isLoading ? "Criando..." : "Criar Orçamento"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

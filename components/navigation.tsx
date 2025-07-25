@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sparkles, FileText, Settings, Menu, Home, Plus } from "lucide-react"
 
 const navigation = [
-  { name: "Catálogo", href: "/", icon: Home },
+  { name: "Início", href: "/", icon: Home },
   { name: "Prompts IA", href: "/prompts", icon: Sparkles },
   { name: "Orçamentos", href: "/quotes", icon: FileText },
   { name: "Adicionar Produto", href: "/catalog/add", icon: Plus },

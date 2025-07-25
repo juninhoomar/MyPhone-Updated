@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function HomePage() {
   const menuItems = [
     {
-      title: 'Catálogo de Produtos',
+      title: 'Início',
       description: 'Visualize e gerencie produtos disponíveis',
       icon: Package,
       href: '/catalog',

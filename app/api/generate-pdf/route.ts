@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from '@supabase/supabase-js'
 import { Quote } from '@/types/quote'
-import puppeteer from 'puppeteer'
 
 interface CompanyData {
   name: string
@@ -73,72 +72,21 @@ export async function POST(request: NextRequest) {
       console.warn('Erro ao buscar dados da empresa, usando dados padrão:', dbError)
     }
 
-    // Gerar HTML do orçamento
+    // Gerar HTML do orçamento para impressão
     const htmlContent = generateQuoteHTML(quote, companyData)
+    const fileName = `orcamento-${quote.id}-${Date.now()}.html`
 
-    // Gerar PDF usando Puppeteer
-    let browser
-    try {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      })
-      
-      const page = await browser.newPage()
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' })
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          left: '20px'
-        }
-      })
-      
-      await browser.close()
-      
-      const fileName = `orcamento-${quote.id}-${Date.now()}.pdf`
-
-      try {
-        // Salvar PDF no bucket do Supabase
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('quotes')
-          .upload(`pdfs/${fileName}`, pdfBuffer, {
-            contentType: 'application/pdf',
-            upsert: true
-          })
-
-        if (uploadError) {
-          console.error('Erro ao fazer upload do PDF:', uploadError)
-          // Continuar mesmo se o upload falhar
-        } else {
-          console.log('PDF salvo no bucket:', uploadData.path)
-        }
-      } catch (storageError) {
-        console.error('Erro no storage:', storageError)
-        // Continuar mesmo se o storage falhar
+    // Retornar HTML otimizado para impressão
+    return new NextResponse(htmlContent, {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Disposition": `inline; filename="${fileName}"`
       }
-
-      // Retornar o PDF para download
-      return new NextResponse(pdfBuffer, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${fileName}"`,
-        },
-      })
-    } catch (puppeteerError) {
-      if (browser) {
-        await browser.close()
-      }
-      throw puppeteerError
-    }
+    })
   } catch (error) {
-    console.error("Erro ao gerar PDF:", error)
+    console.error("Erro ao gerar orçamento:", error)
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-    return NextResponse.json({ error: "Erro ao gerar PDF: " + errorMessage }, { status: 500 })
+    return NextResponse.json({ error: "Erro ao gerar orçamento: " + errorMessage }, { status: 500 })
   }
 }
 
@@ -154,18 +102,6 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
     return date.toLocaleDateString('pt-BR')
   }
 
-  const getPaymentMethodLabel = (method: string) => {
-    const methods: { [key: string]: string } = {
-      'pix': 'PIX',
-      'boleto': 'Boleto Bancário',
-      'cartao_credito': 'Cartão de Crédito',
-      'cartao_debito': 'Cartão de Débito',
-      'dinheiro': 'Dinheiro',
-      'transferencia': 'Transferência Bancária'
-    }
-    return methods[method] || method
-  }
-
   return `
     <!DOCTYPE html>
     <html>
@@ -173,11 +109,16 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
       <meta charset="utf-8">
       <title>Orçamento ${quote.id}</title>
       <style>
+        @media print {
+          body { margin: 0; }
+          .no-print { display: none; }
+        }
         body {
           font-family: Arial, sans-serif;
           margin: 0;
           padding: 20px;
           color: #333;
+          line-height: 1.4;
         }
         .header {
           border-bottom: 2px solid #2563eb;
@@ -278,9 +219,31 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
           width: 300px;
           margin: 40px auto 10px;
         }
+        .print-button {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #2563eb;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .print-button:hover {
+          background: #1d4ed8;
+        }
       </style>
+      <script>
+        function printPage() {
+          window.print();
+        }
+      </script>
     </head>
     <body>
+      <button class="print-button no-print" onclick="printPage()">🖨️ Imprimir</button>
+      
       <div class="header">
         <div class="company-info">
           <div class="company-name">${companyData.name}</div>
@@ -330,8 +293,8 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
                <td>${item.product.name}</td>
                <td>${item.product.brand || ''} ${item.product.model || ''}</td>
                <td class="text-right">${item.quantity}</td>
-               <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-               <td class="text-right">${formatCurrency(item.totalPrice)}</td>
+               <td class="text-right">${formatCurrency(item.unit_price)}</td>
+               <td class="text-right">${formatCurrency(item.total_price)}</td>
              </tr>
            `).join('')}
          </tbody>

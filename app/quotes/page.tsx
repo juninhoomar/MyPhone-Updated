@@ -10,7 +10,7 @@ import { FileText, Download, Eye, Trash2, ShoppingCart } from "lucide-react"
 import Link from "next/link"
 
 export default function QuotesPage() {
-  const { quotes, deleteQuote, updateQuoteStatus } = useQuotes()
+  const { quotes, deleteQuote, updateQuoteStatus, isLoading } = useQuotes()
 
 
 
@@ -106,7 +106,12 @@ export default function QuotesPage() {
 
         {/* Lista de Orçamentos */}
         <div className="grid grid-cols-1 gap-6">
-          {quotes.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Carregando orçamentos...</p>
+            </div>
+          ) : quotes.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Nenhum orçamento criado</h3>
@@ -127,11 +132,11 @@ export default function QuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        {quote.customerName}
+                        {quote.customer_name}
                         <Badge className={getStatusColor(quote.status)}>{getStatusLabel(quote.status)}</Badge>
                       </CardTitle>
                       <CardDescription>
-                        {quote.customerEmail} • {quote.customerPhone}
+                        {quote.customer_email} • {quote.customer_phone}
                       </CardDescription>
                     </div>
                     <div className="text-right">
@@ -147,8 +152,8 @@ export default function QuotesPage() {
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      <p>Criado em: {quote.createdAt.toLocaleDateString("pt-BR")}</p>
-                      <p>Válido até: {quote.validUntil.toLocaleDateString("pt-BR")}</p>
+                      <p>Criado em: {new Date(quote.created_at).toLocaleDateString("pt-BR")}</p>
+                      {quote.valid_until && <p>Válido até: {new Date(quote.valid_until).toLocaleDateString("pt-BR")}</p>}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => generatePDF(quote.id)}>

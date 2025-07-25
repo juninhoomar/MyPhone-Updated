@@ -38,11 +38,6 @@ export interface QuoteFormData {
   customer_email: string;
   customer_phone?: string;
   customer_address?: string;
-  items: {
-    product_id: string;
-    quantity: number;
-    unit_price: number;
-  }[];
   discount_percentage?: number;
   discount_amount?: number;
   notes?: string;

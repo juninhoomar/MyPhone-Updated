@@ -1,35 +1,46 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { supabase } from "@/lib/supabase"
 import type { Quote, QuoteItem, QuoteFormData } from "@/types/quote"
 import type { Product } from "@/types/product"
-
-const QUOTES_KEY = "quotes"
 
 export function useQuotes() {
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [selectedProducts, setSelectedProducts] = useState<Map<string, number>>(new Map())
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Load quotes from localStorage on mount
+  // Load quotes from Supabase on mount
   useEffect(() => {
-    const savedQuotes = localStorage.getItem(QUOTES_KEY)
-    if (savedQuotes) {
-      const parsedQuotes = JSON.parse(savedQuotes).map((q: any) => ({
-        ...q,
-        createdAt: new Date(q.createdAt),
-        updatedAt: new Date(q.updatedAt),
-        validUntil: new Date(q.validUntil),
-      }))
-      setQuotes(parsedQuotes)
-    }
+    loadQuotes()
   }, [])
 
-  // Save quotes to localStorage whenever quotes change
-  useEffect(() => {
-    if (quotes.length > 0) {
-      localStorage.setItem(QUOTES_KEY, JSON.stringify(quotes))
+  const loadQuotes = async () => {
+    try {
+      setIsLoading(true)
+      const { data, error } = await supabase
+        .from('quotes')
+        .select(`
+          *,
+          items:quote_items(
+            *,
+            product:products(*)
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Erro ao carregar orçamentos:', error)
+        return
+      }
+
+      setQuotes(data || [])
+    } catch (error) {
+      console.error('Erro ao carregar orçamentos:', error)
+    } finally {
+      setIsLoading(false)
     }
-  }, [quotes])
+  }
 
   const addProductToQuote = (product: Product, quantity = 1) => {
     setSelectedProducts((prev) => {
@@ -65,56 +76,124 @@ export function useQuotes() {
     setSelectedProducts(new Map())
   }
 
-  const createQuote = (formData: QuoteFormData, products: Product[]): Quote => {
-    const items: QuoteItem[] = Array.from(selectedProducts.entries()).map(([productId, quantity]) => {
-      const product = products.find((p) => p.id === productId)!
-      const unitPrice = product.promotionalPrice || product.price
-      return {
-        product,
-        quantity,
-        unitPrice,
-        totalPrice: unitPrice * quantity,
+  const createQuote = async (formData: QuoteFormData, cartItems: { product: Product; quantity: number }[]): Promise<Quote | null> => {
+    try {
+      // Calcular totais
+      const items = cartItems.map(({ product, quantity }) => {
+        const unitPrice = product.promotionalPrice || product.price
+        return {
+          product_id: product.id,
+          quantity,
+          unit_price: unitPrice,
+          total_price: unitPrice * quantity,
+        }
+      })
+
+      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
+      const discountAmount = formData.discount_amount || 0
+      const total = subtotal - discountAmount
+
+      // Criar orçamento no Supabase
+      const { data: quoteData, error: quoteError } = await supabase
+        .from('quotes')
+        .insert({
+          customer_name: formData.customer_name,
+          customer_email: formData.customer_email,
+          customer_phone: formData.customer_phone,
+          customer_address: formData.customer_address,
+          subtotal,
+          discount_amount: discountAmount,
+          discount_percentage: formData.discount_percentage,
+          total,
+          status: 'draft',
+          notes: formData.notes,
+          valid_until: formData.valid_until,
+        })
+        .select()
+        .single()
+
+      if (quoteError) {
+        console.error('Erro ao criar orçamento:', quoteError)
+        return null
       }
-    })
 
-    const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0)
-    const discount = 0 // Pode ser implementado depois
-    const total = subtotal - discount
+      // Criar itens do orçamento
+      const quoteItems = items.map(item => ({
+        quote_id: quoteData.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      }))
 
-    const validUntil = new Date()
-    validUntil.setDate(validUntil.getDate() + formData.validDays)
+      const { error: itemsError } = await supabase
+        .from('quote_items')
+        .insert(quoteItems)
 
-    const newQuote: Quote = {
-      id: `quote-${Date.now()}`,
-      customerName: formData.customerName,
-      customerEmail: formData.customerEmail,
-      customerPhone: formData.customerPhone,
-      paymentMethod: formData.paymentMethod,
-      items,
-      subtotal,
-      discount,
-      total,
-      status: "draft",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      validUntil,
-      notes: formData.notes,
+      if (itemsError) {
+        console.error('Erro ao criar itens do orçamento:', itemsError)
+        // Tentar deletar o orçamento criado
+        await supabase.from('quotes').delete().eq('id', quoteData.id)
+        return null
+      }
+
+      // Recarregar orçamentos
+      await loadQuotes()
+      clearSelectedProducts()
+
+      return quoteData
+    } catch (error) {
+      console.error('Erro ao criar orçamento:', error)
+      return null
     }
-
-    setQuotes((prev) => [newQuote, ...prev])
-    clearSelectedProducts()
-
-    return newQuote
   }
 
-  const updateQuoteStatus = (quoteId: string, status: Quote["status"]) => {
-    setQuotes((prev) =>
-      prev.map((quote) => (quote.id === quoteId ? { ...quote, status, updatedAt: new Date() } : quote)),
-    )
+  const updateQuoteStatus = async (quoteId: string, status: Quote["status"]) => {
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', quoteId)
+
+      if (error) {
+        console.error('Erro ao atualizar status do orçamento:', error)
+        return
+      }
+
+      // Atualizar estado local
+      setQuotes((prev) =>
+        prev.map((quote) => 
+          quote.id === quoteId 
+            ? { ...quote, status, updated_at: new Date().toISOString() } 
+            : quote
+        )
+      )
+    } catch (error) {
+      console.error('Erro ao atualizar status do orçamento:', error)
+    }
   }
 
-  const deleteQuote = (quoteId: string) => {
-    setQuotes((prev) => prev.filter((quote) => quote.id !== quoteId))
+  const deleteQuote = async (quoteId: string) => {
+    try {
+      // Deletar itens primeiro (devido à foreign key)
+      await supabase.from('quote_items').delete().eq('quote_id', quoteId)
+      
+      // Deletar orçamento
+      const { error } = await supabase
+        .from('quotes')
+        .delete()
+        .eq('id', quoteId)
+
+      if (error) {
+        console.error('Erro ao deletar orçamento:', error)
+        return
+      }
+
+      // Atualizar estado local
+      setQuotes((prev) => prev.filter((quote) => quote.id !== quoteId))
+    } catch (error) {
+      console.error('Erro ao deletar orçamento:', error)
+    }
   }
 
   const getQuote = (quoteId: string) => {
@@ -124,6 +203,7 @@ export function useQuotes() {
   return {
     quotes,
     selectedProducts,
+    isLoading,
     addProductToQuote,
     removeProductFromQuote,
     updateProductQuantity,
@@ -132,5 +212,6 @@ export function useQuotes() {
     updateQuoteStatus,
     deleteQuote,
     getQuote,
+    loadQuotes,
   }
 }
