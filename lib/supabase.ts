@@ -27,3 +27,41 @@ export interface DatabaseProduct {
   created_at: string
   updated_at: string
 }
+
+export interface DatabaseTemplate {
+  id: string
+  name: string
+  category: string
+  description: string | null
+  prompt: string
+  variables: any
+  thumbnail: string | null
+  is_custom: boolean | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type Database = {
+  public: {
+    Tables: {
+      templates: {
+        Row: DatabaseTemplate
+        Insert: Omit<DatabaseTemplate, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Omit<DatabaseTemplate, 'id' | 'created_at' | 'updated_at'>>
+      }
+      products: {
+        Row: DatabaseProduct
+        Insert: Omit<DatabaseProduct, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Omit<DatabaseProduct, 'id' | 'created_at' | 'updated_at'>>
+      }
+    }
+  }
+}

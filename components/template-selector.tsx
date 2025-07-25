@@ -17,6 +17,7 @@ interface TemplateSelectorProps {
   onCreateTemplate: (template: Omit<CustomTemplate, "id" | "isCustom" | "createdAt">) => void
   onUpdateTemplate?: (templateId: string, template: Omit<CustomTemplate, "id" | "isCustom" | "createdAt">) => void
   onDeleteTemplate?: (templateId: string) => void
+  loading?: boolean
 }
 
 export function TemplateSelector({
@@ -27,10 +28,38 @@ export function TemplateSelector({
   onCreateTemplate,
   onUpdateTemplate,
   onDeleteTemplate,
+  loading = false,
 }: TemplateSelectorProps) {
   const [editingTemplate, setEditingTemplate] = useState<CustomTemplate | null>(null)
   const allTemplates = [...templates, ...customTemplates]
   const categories = Array.from(new Set(allTemplates.map((t) => t.category)))
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold mb-3">Escolha um Template</h2>
+          <p className="text-muted-foreground text-lg">
+            Carregando templates...
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8">
@@ -90,7 +119,7 @@ export function TemplateSelector({
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setEditingTemplate(template)
+                                setEditingTemplate(template as CustomTemplate)
                               }}
                               className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                             >

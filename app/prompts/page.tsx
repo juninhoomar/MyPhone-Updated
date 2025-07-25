@@ -1,6 +1,8 @@
 "use client"
 
-import { templates } from "@/data/templates"
+import { useState, useEffect } from "react"
+import { TemplateService } from "@/lib/template-service"
+import { Template } from "@/types/template"
 import { useAdGenerator } from "@/hooks/use-ad-generator"
 import { useAppSettings } from "@/hooks/use-app-settings"
 import { TemplateSelector } from "@/components/template-selector"
@@ -23,9 +25,62 @@ export default function PromptsPage() {
     resetForm,
   } = useAdGenerator()
 
-  const { settings, customTemplates, addCustomTemplate, updateCustomTemplate, deleteCustomTemplate } = useAppSettings()
+  const { settings } = useAppSettings()
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const handleSelectTemplate = (template: (typeof templates)[0]) => {
+  // Carregar templates do banco de dados
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setLoading(true)
+        const dbTemplates = await TemplateService.getAllTemplates()
+        setTemplates(dbTemplates)
+      } catch (error) {
+        console.error('Erro ao carregar templates:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadTemplates()
+  }, [])
+
+  // Funções CRUD para templates
+  const handleCreateTemplate = async (template: Omit<Template, 'id'>) => {
+    try {
+      const newTemplate = await TemplateService.createTemplate(template)
+      if (newTemplate) {
+        setTemplates(prev => [newTemplate, ...prev])
+      }
+    } catch (error) {
+      console.error('Erro ao criar template:', error)
+    }
+  }
+
+  const handleUpdateTemplate = async (id: string, updates: Partial<Template>) => {
+    try {
+      const updatedTemplate = await TemplateService.updateTemplate(id, updates)
+      if (updatedTemplate) {
+        setTemplates(prev => prev.map(t => t.id === id ? updatedTemplate : t))
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar template:', error)
+    }
+  }
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      const success = await TemplateService.deleteTemplate(id)
+      if (success) {
+        setTemplates(prev => prev.filter(t => t.id !== id))
+      }
+    } catch (error) {
+      console.error('Erro ao deletar template:', error)
+    }
+  }
+
+  const handleSelectTemplate = (template: Template) => {
     setSelectedTemplate(template)
     // Initialize variables with default values
     const initialVariables: Record<string, string> = {}
@@ -132,13 +187,14 @@ export default function PromptsPage() {
             />
           ) : (
             <TemplateSelector
-              templates={templates}
-              customTemplates={customTemplates}
+              templates={templates.filter(t => !t.isCustom)}
+              customTemplates={templates.filter(t => t.isCustom)}
               selectedTemplate={selectedTemplate}
               onSelectTemplate={handleSelectTemplate}
-              onCreateTemplate={addCustomTemplate}
-              onUpdateTemplate={updateCustomTemplate}
-              onDeleteTemplate={deleteCustomTemplate}
+              onCreateTemplate={handleCreateTemplate}
+              onUpdateTemplate={handleUpdateTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              loading={loading}
             />
           )}
         </div>
