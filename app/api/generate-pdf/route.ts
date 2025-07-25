@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Configurar Puppeteer para Vercel
     const browser = await puppeteer.launch({
-      headless: 'new',
+      headless: true,
       executablePath: process.env.NODE_ENV === 'production' 
         ? '/usr/bin/google-chrome-stable'
         : undefined,
