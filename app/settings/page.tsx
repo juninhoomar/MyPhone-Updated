@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAppSettings } from "@/hooks/use-app-settings"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -29,10 +29,11 @@ import {
 import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
-  const { settings, updateSettings, resetSettings } = useAppSettings()
+  const { settings, updateSettings, resetSettings, isLoading } = useAppSettings()
   const [showApiKey, setShowApiKey] = useState(false)
   const [tempSettings, setTempSettings] = useState(settings)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const handleSettingChange = (key: keyof typeof settings, value: any) => {
     const newSettings = { ...tempSettings, [key]: value }
@@ -40,28 +41,70 @@ export default function SettingsPage() {
     setHasChanges(true)
   }
 
-  const handleSave = () => {
-    updateSettings(tempSettings)
-    setHasChanges(false)
-    toast({
-      title: "Configurações salvas",
-      description: "Suas configurações foram salvas com sucesso!",
-    })
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      await updateSettings(tempSettings)
+      setHasChanges(false)
+      toast({
+        title: "Configurações salvas",
+        description: "Suas configurações foram salvas com sucesso!",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: "Ocorreu um erro ao salvar as configurações. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleReset = () => {
-    resetSettings()
-    setTempSettings(settings)
-    setHasChanges(false)
-    toast({
-      title: "Configurações resetadas",
-      description: "Todas as configurações foram restauradas para o padrão.",
-    })
+  const handleReset = async () => {
+    setIsSaving(true)
+    try {
+      await resetSettings()
+      setTempSettings(settings)
+      setHasChanges(false)
+      toast({
+        title: "Configurações resetadas",
+        description: "Todas as configurações foram restauradas para o padrão.",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro ao resetar",
+        description: "Ocorreu um erro ao resetar as configurações. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDiscard = () => {
     setTempSettings(settings)
     setHasChanges(false)
+  }
+
+  // Sincroniza tempSettings quando settings mudar (após carregamento)
+  useEffect(() => {
+    if (!isLoading) {
+      setTempSettings(settings)
+    }
+  }, [settings, isLoading])
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando configurações...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -79,12 +122,19 @@ export default function SettingsPage() {
 
         {hasChanges && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDiscard}>
+            <Button 
+              variant="outline" 
+              onClick={handleDiscard}
+              disabled={isSaving || isLoading}
+            >
               Descartar
             </Button>
-            <Button onClick={handleSave}>
+            <Button 
+              onClick={handleSave}
+              disabled={isSaving || isLoading}
+            >
               <Save className="w-4 h-4 mr-2" />
-              Salvar Alterações
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         )}
@@ -211,7 +261,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Sua chave será armazenada localmente e usada para gerar imagens com DALL-E
+                  Sua chave será armazenada localmente e usada para gerar imagens com GPT Image 1
                 </p>
                 {tempSettings.openaiApiKey && (
                   <Badge variant="secondary" className="w-fit">
@@ -382,9 +432,13 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Restaura todas as configurações para os valores padrão. Esta ação não pode ser desfeita.
                   </p>
-                  <Button variant="destructive" onClick={handleReset}>
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleReset}
+                    disabled={isSaving || isLoading}
+                  >
                     <RotateCcw className="w-4 h-4 mr-2" />
-                    Resetar Todas as Configurações
+                    {isSaving ? "Resetando..." : "Resetar Todas as Configurações"}
                   </Button>
                 </div>
 

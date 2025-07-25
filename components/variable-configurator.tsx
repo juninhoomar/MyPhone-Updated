@@ -230,7 +230,7 @@ export function VariableConfigurator({
               ) : (
                 <>
                   <Wand2 className="w-4 h-4 mr-2" />
-                  {settings.openaiApiKey ? "Gerar com DALL-E" : "Gerar Preview"}
+                  {settings.openaiApiKey ? "Gerar com GPT Image 1" : "Gerar Preview"}
                 </>
               )}
             </Button>

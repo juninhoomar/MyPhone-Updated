@@ -1,0 +1,8 @@
+# Fallback for client-side routing
+/*    /index.html   200
+
+# Redirect trailing slashes
+/catalog    /catalog/    301
+/prompts    /prompts/    301
+/quotes     /quotes/     301
+/settings   /settings/   301

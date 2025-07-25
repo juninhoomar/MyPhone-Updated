@@ -89,6 +89,7 @@ export function useQuotes() {
       customerName: formData.customerName,
       customerEmail: formData.customerEmail,
       customerPhone: formData.customerPhone,
+      paymentMethod: formData.paymentMethod,
       items,
       subtotal,
       discount,

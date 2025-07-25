@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react"
 import type { Product, ProductFilters } from "@/types/product"
-import { SAMPLE_PRODUCTS } from "@/data/sample-products"
-
-const PRODUCTS_KEY = "catalog-products"
+import { supabase, type DatabaseProduct } from "@/lib/supabase"
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<ProductFilters>({
     search: "",
     category: "all",
@@ -18,48 +18,165 @@ export function useProducts() {
     sortOrder: "desc",
   })
 
-  // Load products from localStorage on mount
-  useEffect(() => {
-    const savedProducts = localStorage.getItem(PRODUCTS_KEY)
-    if (savedProducts) {
-      const parsedProducts = JSON.parse(savedProducts).map((p: any) => ({
-        ...p,
-        createdAt: new Date(p.createdAt),
-        updatedAt: new Date(p.updatedAt),
-      }))
-      setProducts(parsedProducts)
-    } else {
-      // Se não há produtos salvos, usar os produtos de exemplo
-      setProducts(SAMPLE_PRODUCTS)
+  // Função para converter produto do banco para o tipo Product
+  const convertDatabaseProduct = (dbProduct: DatabaseProduct): Product => {
+    return {
+      id: dbProduct.id,
+      name: dbProduct.name,
+      brand: dbProduct.brand,
+      model: dbProduct.model,
+      category: dbProduct.category as any, // Assumindo que as categorias no banco são válidas
+      price: dbProduct.price,
+      promotionalPrice: dbProduct.original_price && dbProduct.discount_percentage > 0 
+        ? dbProduct.price * (1 - dbProduct.discount_percentage / 100)
+        : undefined,
+      description: dbProduct.description || "",
+      specifications: dbProduct.specifications || [],
+      images: dbProduct.images,
+      status: dbProduct.is_active ? "available" : "out_of_stock",
+      createdAt: new Date(dbProduct.created_at),
+      updatedAt: new Date(dbProduct.updated_at),
     }
+  }
+
+  // Carregar produtos do Supabase
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const { data, error: supabaseError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+      
+      if (supabaseError) {
+        throw supabaseError
+      }
+      
+      const convertedProducts = data?.map(convertDatabaseProduct) || []
+      setProducts(convertedProducts)
+    } catch (err) {
+      console.error('Erro ao carregar produtos:', err)
+      setError('Erro ao carregar produtos')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Carregar produtos na inicialização
+  useEffect(() => {
+    loadProducts()
   }, [])
 
-  // Save products to localStorage whenever products change
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products))
+  const addProduct = async (productData: Omit<Product, "id" | "createdAt" | "updatedAt">) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: productData.name,
+          brand: productData.brand,
+          model: productData.model,
+          category: productData.category,
+          price: productData.price,
+          original_price: productData.promotionalPrice ? productData.price : null,
+          discount_percentage: productData.promotionalPrice ? 
+            Math.round((1 - productData.promotionalPrice / productData.price) * 100) : 0,
+          description: productData.description,
+          specifications: productData.specifications,
+          images: productData.images,
+          is_active: productData.status === "available",
+          is_featured: false,
+          stock_quantity: 10, // valor padrão
+          rating: 0,
+          review_count: 0
+        })
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      const newProduct = convertDatabaseProduct(data)
+      setProducts(prev => [newProduct, ...prev])
+      return newProduct
+    } catch (err) {
+      console.error('Erro ao adicionar produto:', err)
+      throw err
     }
-  }, [products])
-
-  const addProduct = (productData: Omit<Product, "id" | "createdAt" | "updatedAt">) => {
-    const newProduct: Product = {
-      ...productData,
-      id: `product-${Date.now()}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-    setProducts((prev) => [newProduct, ...prev])
-    return newProduct
   }
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts((prev) =>
-      prev.map((product) => (product.id === id ? { ...product, ...updates, updatedAt: new Date() } : product)),
-    )
+  const updateProduct = async (id: string, updates: Partial<Omit<Product, "id" | "createdAt">>) => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          name: updates.name,
+          brand: updates.brand,
+          model: updates.model,
+          category: updates.category,
+          price: updates.price,
+          original_price: updates.promotionalPrice ? updates.price : null,
+          discount_percentage: updates.promotionalPrice ? 
+            Math.round((1 - updates.promotionalPrice / updates.price!) * 100) : 0,
+          description: updates.description,
+          specifications: updates.specifications,
+          images: updates.images,
+          is_active: updates.status === "available",
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      
+      const updatedProduct = convertDatabaseProduct(data)
+      setProducts(prev =>
+        prev.map(product =>
+          product.id === id ? updatedProduct : product
+        )
+      )
+    } catch (err) {
+      console.error('Erro ao atualizar produto:', err)
+      throw err
+    }
   }
 
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id))
+  const deleteProduct = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+      
+      setProducts(prev => prev.filter(product => product.id !== id))
+    } catch (err) {
+      console.error('Erro ao deletar produto:', err)
+      throw err
+    }
+  }
+
+  const duplicateProduct = async (id: string) => {
+    const product = products.find(p => p.id === id)
+    if (product) {
+      try {
+        const duplicatedData = {
+          ...product,
+          name: `${product.name} (Cópia)`,
+        }
+        delete (duplicatedData as any).id
+        delete (duplicatedData as any).createdAt
+        delete (duplicatedData as any).updatedAt
+        
+        return await addProduct(duplicatedData)
+      } catch (err) {
+        console.error('Erro ao duplicar produto:', err)
+        throw err
+      }
+    }
   }
 
   const getProduct = (id: string) => {
@@ -91,7 +208,7 @@ export function useProducts() {
       }
 
       // Brand filter
-      if (filters.brand && product.brand !== filters.brand) {
+      if (filters.brand && filters.brand !== "all" && product.brand !== filters.brand) {
         return false
       }
 
@@ -145,6 +262,9 @@ export function useProducts() {
     addProduct,
     updateProduct,
     deleteProduct,
+    duplicateProduct,
     getProduct,
+    loading,
+    error,
   }
 }

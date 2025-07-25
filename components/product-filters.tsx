@@ -1,12 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { Search, Filter, X } from "lucide-react"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Search, Filter, X, ChevronDown, ChevronUp } from "lucide-react"
 import { type ProductFilters as ProductFiltersType, PRODUCT_CATEGORIES } from "@/types/product"
 
 interface ProductFiltersProps {
@@ -29,6 +31,7 @@ export function ProductFilters(props: ProductFiltersProps) {
   // Sempre trabalhe com um objeto de filtros seguro
   const { filters, onFiltersChange, brands, totalProducts, filteredCount } = props
   const safeFilters = withDefaultPriceRange(filters)
+  const [isOpen, setIsOpen] = useState(true)
 
   const updateFilter = (key: keyof ProductFiltersType, value: any) => {
     onFiltersChange(withDefaultPriceRange({ ...safeFilters, [key]: value }))
@@ -56,27 +59,36 @@ export function ProductFilters(props: ProductFiltersProps) {
     safeFilters.priceRange.max < 10000
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filtros
-          </CardTitle>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filtros
+            </CardTitle>
 
-          {hasActiveFilters && (
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              <X className="w-4 h-4 mr-2" />
-              Limpar
-            </Button>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {filteredCount} de {totalProducts} produtos
-        </p>
-      </CardHeader>
+            <div className="flex items-center gap-2">
+              {hasActiveFilters && (
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  <X className="w-4 h-4 mr-2" />
+                  Limpar
+                </Button>
+              )}
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {filteredCount} de {totalProducts} produtos
+          </p>
+        </CardHeader>
 
-      <CardContent className="space-y-6">
+        <CollapsibleContent>
+          <CardContent className="space-y-6">
         {/* Busca */}
         <div className="space-y-2">
           <Label>Buscar</Label>
@@ -186,9 +198,11 @@ export function ProductFilters(props: ProductFiltersProps) {
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   )
 }
 

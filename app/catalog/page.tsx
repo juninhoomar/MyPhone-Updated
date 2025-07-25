@@ -4,34 +4,27 @@ import { useState } from "react"
 import { useProducts } from "@/hooks/use-products"
 import { ProductCard } from "@/components/product-card"
 import { ProductFilters } from "@/components/product-filters"
+import { QuoteCartSidebar } from "@/components/quote-cart-sidebar"
+import { FloatingQuoteButton } from "@/components/floating-quote-button"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Grid3X3, List, Package, Smartphone, Laptop, Tablet } from "lucide-react"
+import { Plus, Grid3X3, List, Package, Smartphone, Laptop, Tablet, ShoppingCart } from "lucide-react"
 import Link from "next/link"
+import { useQuoteCart } from "@/contexts/quote-cart-context"
 import type { ProductFilters as FilterType } from "@/types/product"
 
 export default function CatalogPage() {
-  const { products, filteredProducts, applyFilters } = useProducts()
+  const { products, filteredProducts, filters, setFilters, brands, loading, error } = useProducts()
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [filters, setFilters] = useState<FilterType>({
-    search: "",
-    category: "",
-    brand: "",
-    minPrice: 0,
-    maxPrice: 15000,
-    status: "",
-    sortBy: "name",
-    sortOrder: "asc",
-  })
+  const { getCartSummary } = useQuoteCart()
+  const { totalItems } = getCartSummary()
 
   const handleFiltersChange = (newFilters: FilterType) => {
     setFilters(newFilters)
-    applyFilters(newFilters)
   }
 
   const categories = Array.from(new Set(products.map((p) => p.category)))
-  const brands = Array.from(new Set(products.map((p) => p.brand)))
 
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
@@ -46,6 +39,30 @@ export default function CatalogPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-600">Carregando produtos...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <Package className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Erro ao carregar produtos</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
@@ -58,6 +75,21 @@ export default function CatalogPage() {
             <p className="text-xl text-gray-600">Explore nossa seleção de produtos eletrônicos premium</p>
           </div>
           <div className="flex items-center gap-4 mt-4 md:mt-0">
+            <QuoteCartSidebar>
+              <Button variant="outline" className="relative">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Orçamento
+                {totalItems > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                  >
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+            </QuoteCartSidebar>
+            
             <Link href="/catalog/add">
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -120,16 +152,16 @@ export default function CatalogPage() {
           <div className="flex flex-wrap gap-3">
             {categories.map((category) => (
               <Button
-                key={category}
-                variant={filters.category === category ? "default" : "outline"}
-                onClick={() =>
-                  handleFiltersChange({
-                    ...filters,
-                    category: filters.category === category ? "" : category,
-                  })
-                }
-                className="flex items-center gap-2"
-              >
+                  key={category}
+                  variant={filters.category === category ? "default" : "outline"}
+                  onClick={() =>
+                    handleFiltersChange({
+                      ...filters,
+                      category: filters.category === category ? "all" : category,
+                    })
+                  }
+                  className="flex items-center gap-2"
+                >
                 {getCategoryIcon(category)}
                 {category}
                 <Badge variant="secondary" className="ml-1">
@@ -147,7 +179,6 @@ export default function CatalogPage() {
               <ProductFilters
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
-                categories={categories}
                 brands={brands}
                 totalProducts={products.length}
                 filteredCount={filteredProducts.length}
@@ -197,10 +228,10 @@ export default function CatalogPage() {
                 </div>
               ) : (
                 <div
-                  className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" : "space-y-4"}
+                  className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-[30px] justify-items-center" : "space-y-4"}
                 >
                   {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} viewMode={viewMode} />
+                    <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
               )}
@@ -208,6 +239,9 @@ export default function CatalogPage() {
           </div>
         </div>
       </div>
+      
+      {/* Botão Flutuante para Finalizar Orçamento */}
+      <FloatingQuoteButton />
     </div>
   )
 }

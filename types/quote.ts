@@ -12,6 +12,7 @@ export interface Quote {
   customerName: string
   customerEmail: string
   customerPhone: string
+  paymentMethod?: string
   items: QuoteItem[]
   subtotal: number
   discount: number
@@ -27,6 +28,7 @@ export interface QuoteFormData {
   customerName: string
   customerEmail: string
   customerPhone: string
+  paymentMethod: string
   notes?: string
   validDays: number
 }

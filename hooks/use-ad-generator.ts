@@ -63,11 +63,14 @@ export function useAdGenerator() {
           }),
         })
 
-        if (!response.ok) {
-          throw new Error("Failed to generate image")
-        }
-
         const data = await response.json()
+        
+        if (!response.ok) {
+          if (data.verificationRequired) {
+            throw new Error(`Verificação necessária: ${data.error}\n\nPor favor, verifique sua organização em: ${data.verificationUrl}`)
+          }
+          throw new Error(data.error || "Failed to generate image")
+        }
 
         const newPost: GeneratedPost = {
           id: Date.now().toString(),
