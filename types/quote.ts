@@ -1,34 +1,50 @@
-import type { Product } from "./product"
-
-export interface QuoteItem {
-  product: Product
-  quantity: number
-  unitPrice: number
-  totalPrice: number
+export interface Quote {
+  id: string;
+  quote_number?: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  customer_address?: string;
+  items: QuoteItem[];
+  subtotal: number;
+  discount_percentage?: number;
+  discount_amount?: number;
+  total: number;
+  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  valid_until?: string;
 }
 
-export interface Quote {
-  id: string
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  paymentMethod?: string
-  items: QuoteItem[]
-  subtotal: number
-  discount: number
-  total: number
-  status: "draft" | "sent" | "approved" | "rejected"
-  createdAt: Date
-  updatedAt: Date
-  validUntil: Date
-  notes?: string
+export interface QuoteItem {
+  id: string;
+  quote_id: string;
+  product_id: string;
+  product: {
+    id: string;
+    name: string;
+    brand?: string;
+    model?: string;
+    price: number;
+  };
+  quantity: number;
+  unit_price: number;
+  total_price: number;
 }
 
 export interface QuoteFormData {
-  customerName: string
-  customerEmail: string
-  customerPhone: string
-  paymentMethod: string
-  notes?: string
-  validDays: number
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  customer_address?: string;
+  items: {
+    product_id: string;
+    quantity: number;
+    unit_price: number;
+  }[];
+  discount_percentage?: number;
+  discount_amount?: number;
+  notes?: string;
+  valid_until?: string;
 }

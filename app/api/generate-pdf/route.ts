@@ -292,23 +292,22 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
         </div>
       </div>
 
-      <div class="quote-title">ORÇAMENTO Nº ${quote.id}</div>
+      <div class="quote-title">ORÇAMENTO Nº ${quote.quote_number || quote.id}</div>
 
       <div class="info-section">
         <div class="info-box">
           <div class="info-title">DADOS DO CLIENTE</div>
           <div class="info-content">
-             <strong>Nome:</strong> ${quote.customerName || 'N/A'}<br>
-             <strong>Email:</strong> ${quote.customerEmail || 'N/A'}<br>
-             <strong>Telefone:</strong> ${quote.customerPhone || 'N/A'}<br>
-             <strong>Forma de Pagamento:</strong> ${getPaymentMethodLabel(quote.paymentMethod || 'N/A')}
+             <strong>Nome:</strong> ${quote.customer_name || 'N/A'}<br>
+             <strong>Email:</strong> ${quote.customer_email || 'N/A'}<br>
+             <strong>Telefone:</strong> ${quote.customer_phone || 'N/A'}
            </div>
         </div>
         <div class="info-box">
           <div class="info-title">INFORMAÇÕES DO ORÇAMENTO</div>
           <div class="info-content">
-             <strong>Data de Emissão:</strong> ${formatDate(new Date(quote.createdAt))}<br>
-             <strong>Válido até:</strong> ${quote.validUntil ? formatDate(new Date(quote.validUntil)) : 'N/A'}<br>
+             <strong>Data de Emissão:</strong> ${formatDate(new Date(quote.created_at))}<br>
+             <strong>Válido até:</strong> ${quote.valid_until ? formatDate(new Date(quote.valid_until)) : 'N/A'}<br>
              <strong>Status:</strong> ${quote.status || 'Pendente'}<br>
              <strong>Vendedor:</strong> Sistema MyPhone
            </div>
@@ -343,10 +342,10 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
           <span>Subtotal:</span>
           <span>${formatCurrency(quote.subtotal)}</span>
         </div>
-        ${quote.discount > 0 ? `
+        ${quote.discount_amount && quote.discount_amount > 0 ? `
           <div class="total-row">
             <span>Desconto:</span>
-            <span>-${formatCurrency(quote.discount)}</span>
+            <span>-${formatCurrency(quote.discount_amount)}</span>
           </div>
         ` : ''}
         <div class="total-row total-final">
