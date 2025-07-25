@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from '@supabase/supabase-js'
 import { Quote } from '@/types/quote'
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-core'
+import chromium from '@sparticuz/chromium'
 
 interface CompanyData {
   name: string
@@ -85,26 +86,18 @@ export async function POST(request: NextRequest) {
 
     // Configurar Puppeteer para Vercel
     const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.NODE_ENV === 'production' 
-        ? '/usr/bin/google-chrome-stable'
-        : undefined,
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--single-process',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ],
-      timeout: 60000
+      args: process.env.NODE_ENV === 'production' 
+        ? chromium.args
+        : [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage'
+          ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: process.env.NODE_ENV === 'production'
+        ? await chromium.executablePath()
+        : puppeteer.executablePath(),
+      headless: process.env.NODE_ENV === 'production' ? chromium.headless : true
     })
 
     const page = await browser.newPage()
