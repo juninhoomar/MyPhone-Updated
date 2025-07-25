@@ -248,13 +248,13 @@ export default function QuoteDetailPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={item.product.images[0] || "/placeholder.svg"}
+                            src={(item.product.images && item.product.images[0]) || "/placeholder.svg"}
                             alt={item.product.name}
                             className="w-12 h-12 object-cover rounded"
                           />
                           <div>
                             <p className="font-medium">{item.product.name}</p>
-                            <p className="text-sm text-gray-500">{item.product.description}</p>
+                            <p className="text-sm text-gray-500">{item.product.description || 'Sem descrição'}</p>
                           </div>
                         </div>
                       </td>

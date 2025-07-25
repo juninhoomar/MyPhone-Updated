@@ -27,6 +27,8 @@ export interface QuoteItem {
     brand?: string;
     model?: string;
     price: number;
+    images?: string[];
+    description?: string;
   };
   quantity: number;
   unit_price: number;
