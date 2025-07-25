@@ -119,7 +119,7 @@ export default function QuoteDetailPage() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Orçamento #{quote.id}
+                Orçamento {quote.quote_number || `#${quote.id}`}
               </h1>
               <p className="text-gray-600">Detalhes do orçamento</p>
             </div>

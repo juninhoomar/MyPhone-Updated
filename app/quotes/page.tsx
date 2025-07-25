@@ -2,6 +2,9 @@
 
 import type React from "react"
 import { useState, useMemo } from "react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { CalendarIcon, X } from "lucide-react"
 
 import { useQuotes } from "@/hooks/use-quotes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +12,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { FileText, Download, Eye, Trash2, ShoppingCart, Search, Filter } from "lucide-react"
+import { cn } from "@/lib/utils"
 import Link from "next/link"
 
 export default function QuotesPage() {
@@ -19,6 +25,8 @@ export default function QuotesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [dateFilter, setDateFilter] = useState("all")
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   
   // Filtrar orçamentos
   const filteredQuotes = useMemo(() => {
@@ -36,22 +44,43 @@ export default function QuotesPage() {
       
       // Filtro por data
       let matchesDate = true
-      if (dateFilter !== "all" && quote.created_at) {
+      if (quote.created_at) {
         const quoteDate = new Date(quote.created_at)
         const now = new Date()
         
-        switch (dateFilter) {
-          case "today":
-            matchesDate = quoteDate.toDateString() === now.toDateString()
-            break
-          case "week":
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            matchesDate = quoteDate >= weekAgo
-            break
-          case "month":
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            matchesDate = quoteDate >= monthAgo
-            break
+        // Filtros predefinidos
+        if (dateFilter !== "all") {
+          switch (dateFilter) {
+            case "today":
+              matchesDate = quoteDate.toDateString() === now.toDateString()
+              break
+            case "week":
+              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+              matchesDate = quoteDate >= weekAgo
+              break
+            case "month":
+              const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+              matchesDate = quoteDate >= monthAgo
+              break
+            case "custom":
+              // Para filtro customizado, usar as datas selecionadas
+              if (startDate && endDate) {
+                const start = new Date(startDate)
+                start.setHours(0, 0, 0, 0)
+                const end = new Date(endDate)
+                end.setHours(23, 59, 59, 999)
+                matchesDate = quoteDate >= start && quoteDate <= end
+              } else if (startDate) {
+                const start = new Date(startDate)
+                start.setHours(0, 0, 0, 0)
+                matchesDate = quoteDate >= start
+              } else if (endDate) {
+                const end = new Date(endDate)
+                end.setHours(23, 59, 59, 999)
+                matchesDate = quoteDate <= end
+              }
+              break
+          }
         }
       }
       
@@ -195,16 +224,85 @@ export default function QuotesPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Período</label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o período" />
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Período" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os períodos</SelectItem>
                     <SelectItem value="today">Hoje</SelectItem>
                     <SelectItem value="week">Última semana</SelectItem>
                     <SelectItem value="month">Último mês</SelectItem>
+                    <SelectItem value="custom">Período personalizado</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {/* Date Pickers para filtro customizado */}
+                {dateFilter === "custom" && (
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[140px] justify-start text-left font-normal",
+                            !startDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={startDate}
+                          onSelect={setStartDate}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    <span className="text-muted-foreground">até</span>
+
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[140px] justify-start text-left font-normal",
+                            !endDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={endDate}
+                          onSelect={setEndDate}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+
+                    {(startDate || endDate) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setStartDate(undefined)
+                          setEndDate(undefined)
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -263,11 +361,16 @@ export default function QuotesPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        {quote.customer_name}
+                        <span className="text-lg font-bold text-primary">
+                          {quote.quote_number || `ORD-${String(quote.id).padStart(3, '0')}`}
+                        </span>
                         <Badge className={getStatusColor(quote.status)}>{getStatusLabel(quote.status)}</Badge>
                       </CardTitle>
                       <CardDescription>
-                        {quote.customer_email} • {quote.customer_phone}
+                        <div className="space-y-1">
+                          <p className="font-medium">{quote.customer_name}</p>
+                          <p>{quote.customer_email} • {quote.customer_phone}</p>
+                        </div>
                       </CardDescription>
                     </div>
                     <div className="text-right">
