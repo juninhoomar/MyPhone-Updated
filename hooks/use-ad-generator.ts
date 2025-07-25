@@ -42,7 +42,7 @@ export function useAdGenerator() {
   }, [])
 
   const generatePost = useCallback(
-    async (settings: AppSettings) => {
+    async (settings: AppSettings, referenceImage?: File) => {
       if (!selectedTemplate) return
 
       setIsGenerating(true)
@@ -50,17 +50,33 @@ export function useAdGenerator() {
       try {
         const prompt = generatePrompt(selectedTemplate, variables)
 
-        const response = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
+        // Prepare form data if there's a reference image
+        let body: string | FormData
+        let headers: Record<string, string>
+
+        if (referenceImage) {
+          const formData = new FormData()
+          formData.append('prompt', prompt)
+          formData.append('apiKey', settings.openaiApiKey || '')
+          formData.append('size', settings.defaultImageSize)
+          formData.append('style', settings.imageStyle)
+          formData.append('referenceImage', referenceImage)
+          body = formData
+          headers = {} // Let browser set Content-Type for FormData
+        } else {
+          body = JSON.stringify({
             prompt,
             apiKey: settings.openaiApiKey,
             size: settings.defaultImageSize,
             style: settings.imageStyle,
-          }),
+          })
+          headers = { "Content-Type": "application/json" }
+        }
+
+        const response = await fetch("/api/generate-image", {
+          method: "POST",
+          headers,
+          body,
         })
 
         const data = await response.json()

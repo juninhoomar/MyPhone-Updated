@@ -19,7 +19,7 @@ interface VariableConfiguratorProps {
   uploadedImages: Record<string, string>
   onUpdateVariable: (variableId: string, value: string) => void
   onUploadImage: (variableId: string, file: File) => void
-  onGenerate: (settings: AppSettings) => void
+  onGenerate: (settings: AppSettings, referenceImage?: File) => void
   onBack: () => void
   isGenerating: boolean
   settings: AppSettings
@@ -37,7 +37,10 @@ export function VariableConfigurator({
   settings,
 }: VariableConfiguratorProps) {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const referenceImageInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedImageSize, setSelectedImageSize] = useState<string>(settings.defaultImageSize)
+  const [referenceImage, setReferenceImage] = useState<File | null>(null)
+  const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null)
 
   const imageSizeOptions = [
     { value: "1024x1024", label: "Quadrado (1024x1024) - Post Instagram/Facebook" },
@@ -56,6 +59,23 @@ export function VariableConfigurator({
     onUpdateVariable(variableId, "")
     if (fileInputRefs.current[variableId]) {
       fileInputRefs.current[variableId]!.value = ""
+    }
+  }
+
+  const handleReferenceImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setReferenceImage(file)
+      const url = URL.createObjectURL(file)
+      setReferenceImagePreview(url)
+    }
+  }
+
+  const removeReferenceImage = () => {
+    setReferenceImage(null)
+    setReferenceImagePreview(null)
+    if (referenceImageInputRef.current) {
+      referenceImageInputRef.current.value = ""
     }
   }
 
@@ -202,6 +222,52 @@ export function VariableConfigurator({
               </div>
             ))}
 
+            {/* Upload de Imagem de Referência */}
+            <div className="space-y-2">
+              <Label>Imagem de Referência (Opcional)</Label>
+              <p className="text-sm text-muted-foreground">
+                Envie uma imagem para usar como referência na geração do anúncio
+              </p>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => referenceImageInputRef.current?.click()}
+                    className="flex-1"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {referenceImage ? "Alterar Imagem de Referência" : "Selecionar Imagem de Referência"}
+                  </Button>
+                  {referenceImage && (
+                    <Button type="button" variant="outline" size="sm" onClick={removeReferenceImage}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <input
+                  ref={referenceImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleReferenceImageUpload}
+                  className="hidden"
+                />
+                {referenceImagePreview && (
+                  <div className="relative w-full h-32 border rounded-lg overflow-hidden">
+                    <Image
+                      src={referenceImagePreview}
+                      alt="Preview da imagem de referência"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                {referenceImage && (
+                  <p className="text-sm text-muted-foreground">Arquivo: {referenceImage.name}</p>
+                )}
+              </div>
+            </div>
+
             {/* Seleção de tamanho da imagem */}
             <div className="space-y-2">
               <Label>Tamanho da Imagem</Label>
@@ -219,7 +285,7 @@ export function VariableConfigurator({
               </Select>
             </div>
 
-            <Button onClick={() => onGenerate({...settings, defaultImageSize: selectedImageSize as any})} disabled={isGenerating} className="w-full" size="lg">
+            <Button onClick={() => onGenerate({...settings, defaultImageSize: selectedImageSize as any}, referenceImage || undefined)} disabled={isGenerating} className="w-full" size="lg">
               {isGenerating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
