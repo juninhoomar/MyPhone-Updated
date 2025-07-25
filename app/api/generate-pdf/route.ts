@@ -83,9 +83,12 @@ export async function POST(request: NextRequest) {
     const html = generateQuoteHTML(quote, companyData)
     console.log('Generated HTML length:', html.length)
 
-    // Configurar Puppeteer
+    // Configurar Puppeteer para Vercel
     const browser = await puppeteer.launch({
-      headless: true,
+      headless: 'new',
+      executablePath: process.env.NODE_ENV === 'production' 
+        ? '/usr/bin/google-chrome-stable'
+        : undefined,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox',
@@ -93,9 +96,15 @@ export async function POST(request: NextRequest) {
         '--disable-accelerated-2d-canvas',
         '--no-first-run',
         '--no-zygote',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
         '--single-process',
-        '--disable-gpu'
-      ]
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ],
+      timeout: 60000
     })
 
     const page = await browser.newPage()
