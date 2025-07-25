@@ -23,7 +23,7 @@ export default function PromptsPage() {
     resetForm,
   } = useAdGenerator()
 
-  const { settings, customTemplates, addCustomTemplate, deleteCustomTemplate } = useAppSettings()
+  const { settings, customTemplates, addCustomTemplate, updateCustomTemplate, deleteCustomTemplate } = useAppSettings()
 
   const handleSelectTemplate = (template: (typeof templates)[0]) => {
     setSelectedTemplate(template)
@@ -137,6 +137,7 @@ export default function PromptsPage() {
               selectedTemplate={selectedTemplate}
               onSelectTemplate={handleSelectTemplate}
               onCreateTemplate={addCustomTemplate}
+              onUpdateTemplate={updateCustomTemplate}
               onDeleteTemplate={deleteCustomTemplate}
             />
           )}

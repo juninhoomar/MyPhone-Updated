@@ -304,7 +304,7 @@ export default function SettingsPage() {
                   <Label htmlFor="imageSize">Tamanho da Imagem</Label>
                   <Select
                     value={tempSettings.defaultImageSize}
-                    onValueChange={(value: "256x256" | "512x512" | "1024x1024") =>
+                    onValueChange={(value: "1024x1024" | "1024x1536" | "1536x1024") =>
                       handleSettingChange("defaultImageSize", value)
                     }
                   >
@@ -312,9 +312,9 @@ export default function SettingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="256x256">256x256 (Rápido)</SelectItem>
-                      <SelectItem value="512x512">512x512 (Médio)</SelectItem>
-                      <SelectItem value="1024x1024">1024x1024 (Alta Qualidade)</SelectItem>
+                      <SelectItem value="1024x1024">1024x1024 (Quadrado)</SelectItem>
+                      <SelectItem value="1024x1536">1024x1536 (Vertical)</SelectItem>
+                      <SelectItem value="1536x1024">1536x1024 (Horizontal)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

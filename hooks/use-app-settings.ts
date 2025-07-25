@@ -177,6 +177,16 @@ export function useAppSettings() {
     return newTemplate
   }
 
+  const updateCustomTemplate = (templateId: string, updatedTemplate: Omit<CustomTemplate, "id" | "isCustom" | "createdAt">) => {
+    const updatedTemplates = customTemplates.map((t) => 
+      t.id === templateId 
+        ? { ...t, ...updatedTemplate }
+        : t
+    )
+    setCustomTemplates(updatedTemplates)
+    localStorage.setItem(CUSTOM_TEMPLATES_KEY, JSON.stringify(updatedTemplates))
+  }
+
   const deleteCustomTemplate = (templateId: string) => {
     const updatedTemplates = customTemplates.filter((t) => t.id !== templateId)
     setCustomTemplates(updatedTemplates)
@@ -190,6 +200,7 @@ export function useAppSettings() {
     updateSettings,
     resetSettings,
     addCustomTemplate,
+    updateCustomTemplate,
     deleteCustomTemplate,
   }
 }

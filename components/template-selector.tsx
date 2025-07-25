@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TemplateCreator } from "./template-creator"
-import { Trash2, User } from "lucide-react"
+import { TemplateEditor } from "./template-editor"
+import { Trash2, User, Edit } from "lucide-react"
+import { useState } from "react"
 
 interface TemplateSelectorProps {
   templates: Template[]
@@ -13,6 +15,7 @@ interface TemplateSelectorProps {
   selectedTemplate: Template | null
   onSelectTemplate: (template: Template) => void
   onCreateTemplate: (template: Omit<CustomTemplate, "id" | "isCustom" | "createdAt">) => void
+  onUpdateTemplate?: (templateId: string, template: Omit<CustomTemplate, "id" | "isCustom" | "createdAt">) => void
   onDeleteTemplate?: (templateId: string) => void
 }
 
@@ -22,8 +25,10 @@ export function TemplateSelector({
   selectedTemplate,
   onSelectTemplate,
   onCreateTemplate,
+  onUpdateTemplate,
   onDeleteTemplate,
 }: TemplateSelectorProps) {
+  const [editingTemplate, setEditingTemplate] = useState<CustomTemplate | null>(null)
   const allTemplates = [...templates, ...customTemplates]
   const categories = Array.from(new Set(allTemplates.map((t) => t.category)))
 
@@ -77,18 +82,35 @@ export function TemplateSelector({
                         </div>
                       </div>
 
-                      {"isCustom" in template && template.isCustom && onDeleteTemplate && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onDeleteTemplate(template.id)
-                          }}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      {"isCustom" in template && template.isCustom && (onUpdateTemplate || onDeleteTemplate) && (
+                        <div className="flex gap-1">
+                          {onUpdateTemplate && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingTemplate(template)
+                              }}
+                              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onDeleteTemplate && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onDeleteTemplate(template.id)
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </CardHeader>
@@ -132,6 +154,13 @@ export function TemplateSelector({
           <TemplateCreator onCreateTemplate={onCreateTemplate} />
         </div>
       )}
+
+      <TemplateEditor
+        template={editingTemplate}
+        open={!!editingTemplate}
+        onOpenChange={(open) => !open && setEditingTemplate(null)}
+        onUpdateTemplate={onUpdateTemplate}
+      />
     </div>
   )
 }

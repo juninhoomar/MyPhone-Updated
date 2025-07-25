@@ -34,7 +34,7 @@ export interface CustomTemplate extends Template {
 
 export interface AppSettings {
   openaiApiKey?: string
-  defaultImageSize: "256x256" | "512x512" | "1024x1024" | "1024x1792" | "1792x1024"
+  defaultImageSize: "1024x1024" | "1024x1536" | "1536x1024"
   imageStyle: "natural" | "vivid"
   theme: "light" | "dark" | "system"
   language: "pt" | "en" | "es"

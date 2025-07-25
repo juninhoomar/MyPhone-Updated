@@ -41,10 +41,8 @@ export function VariableConfigurator({
 
   const imageSizeOptions = [
     { value: "1024x1024", label: "Quadrado (1024x1024) - Post Instagram/Facebook" },
-    { value: "1024x1792", label: "Vertical (1024x1792) - Stories Instagram" },
-    { value: "1792x1024", label: "Horizontal (1792x1024) - Post Facebook" },
-    { value: "512x512", label: "Quadrado Pequeno (512x512)" },
-    { value: "256x256", label: "Miniatura (256x256)" },
+    { value: "1024x1536", label: "Vertical (1024x1536) - Stories Instagram" },
+    { value: "1536x1024", label: "Horizontal (1536x1024) - Post Facebook" },
   ]
 
   const handleImageUpload = (variableId: string, event: React.ChangeEvent<HTMLInputElement>) => {
