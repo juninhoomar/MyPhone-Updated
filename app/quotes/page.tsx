@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { FileText, Download, Eye, Trash2, ShoppingCart, Search, Filter } from "lucide-react"
+import { FileText, Download, Eye, Edit, Trash2, ShoppingCart, Search, Filter } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
@@ -398,6 +398,12 @@ export default function QuotesPage() {
                         <Button variant="outline" size="sm">
                           <Eye className="w-4 h-4 mr-2" />
                           Ver
+                        </Button>
+                      </Link>
+                      <Link href={`/quotes/${quote.id}/edit`}>
+                        <Button variant="outline" size="sm">
+                          <Edit className="w-4 h-4 mr-2" />
+                          Editar
                         </Button>
                       </Link>
                       <Button

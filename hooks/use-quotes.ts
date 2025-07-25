@@ -199,6 +199,78 @@ const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
     return quotes.find((quote) => quote.id === quoteId)
   }
 
+  const updateQuote = async (quoteId: string, formData: QuoteFormData, cartItems: { product: Product; quantity: number }[]): Promise<Quote | null> => {
+    try {
+      // Calcular totais
+      const items = cartItems.map(({ product, quantity }) => {
+        const unitPrice = product.promotionalPrice || product.price
+        return {
+          product_id: product.id,
+          quantity,
+          unit_price: unitPrice,
+          total_price: unitPrice * quantity,
+        }
+      })
+      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
+      const discountAmount = formData.discount_amount || 0
+      const total = subtotal - discountAmount
+
+      // Atualizar orçamento no Supabase
+      const { data: quoteData, error: quoteError } = await supabase
+        .from('quotes')
+        .update({
+          customer_name: formData.customer_name,
+          customer_email: formData.customer_email,
+          customer_phone: formData.customer_phone,
+          customer_address: formData.customer_address,
+          subtotal,
+          discount_amount: discountAmount,
+          discount_percentage: formData.discount_percentage,
+          total,
+          notes: formData.notes,
+          valid_until: formData.valid_until,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', quoteId)
+        .select()
+        .single()
+
+      if (quoteError) {
+        console.error('Erro ao atualizar orçamento:', quoteError)
+        return null
+      }
+
+      // Deletar itens existentes
+      await supabase.from('quote_items').delete().eq('quote_id', quoteId)
+
+      // Criar novos itens do orçamento
+      const quoteItems = items.map(item => ({
+        quote_id: quoteId,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('quote_items')
+        .insert(quoteItems)
+
+      if (itemsError) {
+        console.error('Erro ao atualizar itens do orçamento:', itemsError)
+        return null
+      }
+
+      // Recarregar orçamentos
+      await loadQuotes()
+
+      return quoteData
+    } catch (error) {
+      console.error('Erro ao atualizar orçamento:', error)
+      return null
+    }
+  }
+
   return {
     quotes,
     selectedProducts,
@@ -208,6 +280,7 @@ const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
     updateProductQuantity,
     clearSelectedProducts,
     createQuote,
+    updateQuote,
     updateQuoteStatus,
     deleteQuote,
     getQuote,
