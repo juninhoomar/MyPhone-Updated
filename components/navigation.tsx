@@ -5,10 +5,11 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sparkles, FileText, Settings, Menu, Home, Plus } from "lucide-react"
+import { Sparkles, FileText, Settings, Menu, Home, Plus, Package } from "lucide-react"
 
 const navigation = [
   { name: "Início", href: "/", icon: Home },
+  { name: "Catálogo", href: "/catalog", icon: Package },
   { name: "Prompts IA", href: "/prompts", icon: Sparkles },
   { name: "Orçamentos", href: "/quotes", icon: FileText },
   { name: "Adicionar Produto", href: "/catalog/add", icon: Plus },
