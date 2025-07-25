@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, FileText, Settings, Package } from 'lucide-react';
+import { Lightbulb, FileText, Settings, Package } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -22,12 +22,12 @@ export default function HomePage() {
       color: 'bg-green-500'
     },
     {
-      title: 'Vendas',
-      description: 'Acompanhe vendas e histórico de transações',
-      icon: ShoppingCart,
-      href: '/sales',
-      color: 'bg-purple-500'
-    },
+       title: 'Prompts',
+       description: 'Geração de conteúdo com IA para marketing',
+       icon: Lightbulb,
+       href: '/prompts',
+       color: 'bg-purple-500'
+     },
     {
       title: 'Configurações',
       description: 'Configure preferências e dados da empresa',
