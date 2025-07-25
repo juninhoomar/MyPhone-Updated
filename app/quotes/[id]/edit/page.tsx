@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useQuotes } from "@/hooks/use-quotes"
 import { useProducts } from "@/hooks/use-products"
+import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,17 +13,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Plus, Minus, Trash2, Save } from "lucide-react"
 import Link from "next/link"
-import type { QuoteFormData } from "@/types/quote"
+import type { QuoteFormData, Quote } from "@/types/quote"
 import type { Product } from "@/types/product"
 
 export default function EditQuotePage() {
   const router = useRouter()
   const params = useParams()
   const quoteId = params.id as string
-  const { getQuote, updateQuote } = useQuotes()
+  const { updateQuote } = useQuotes()
   const { products } = useProducts()
   const [isLoading, setIsLoading] = useState(false)
-  const [quote, setQuote] = useState(getQuote(quoteId))
+  const [quote, setQuote] = useState<Quote | null>(null)
   const [cartItems, setCartItems] = useState<{ product: Product; quantity: number }[]>([])
   const [formData, setFormData] = useState<QuoteFormData>({
     customer_name: "",
@@ -34,6 +35,41 @@ export default function EditQuotePage() {
     notes: "",
     valid_until: "",
   })
+
+  // Carregar orçamento do Supabase
+  useEffect(() => {
+    const loadQuote = async () => {
+      try {
+        setIsLoading(true)
+        const { data, error } = await supabase
+          .from('quotes')
+          .select(`
+            *,
+            items:quote_items(
+              *,
+              product:products(*)
+            )
+          `)
+          .eq('id', quoteId)
+          .single()
+
+        if (error) {
+          console.error('Erro ao carregar orçamento:', error)
+          return
+        }
+
+        setQuote(data)
+      } catch (error) {
+        console.error('Erro ao carregar orçamento:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (quoteId) {
+      loadQuote()
+    }
+  }, [quoteId])
 
   useEffect(() => {
     if (quote) {
@@ -49,7 +85,7 @@ export default function EditQuotePage() {
       })
 
       // Carregar itens do orçamento
-      const items = quote.items.map(item => ({
+      const items = quote.items.map((item: any) => ({
         product: item.product as Product,
         quantity: item.quantity
       }))
@@ -122,6 +158,16 @@ export default function EditQuotePage() {
   }
 
   const { subtotal, total } = calculateTotals()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Carregando orçamento...</h2>
+        </div>
+      </div>
+    )
+  }
 
   if (!quote) {
     return (
