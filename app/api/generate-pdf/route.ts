@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from '@supabase/supabase-js'
 import { Quote } from '@/types/quote'
+import puppeteer from 'puppeteer'
 
 interface CompanyData {
   name: string
@@ -37,9 +38,13 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const { quoteId, quoteData } = await request.json()
-
-    if (!quoteData) {
-      return NextResponse.json({ error: "Dados do orçamento não fornecidos" }, { status: 400 })
+    
+    console.log('Generating PDF for quote:', quoteId)
+    console.log('Quote data:', JSON.stringify(quoteData, null, 2))
+    
+    if (!quoteId || !quoteData) {
+      console.error('Missing quoteId or quoteData')
+      return NextResponse.json({ error: 'Quote ID and data are required' }, { status: 400 })
     }
 
     // Usar os dados do orçamento fornecidos
@@ -72,21 +77,79 @@ export async function POST(request: NextRequest) {
       console.warn('Erro ao buscar dados da empresa, usando dados padrão:', dbError)
     }
 
-    // Gerar HTML do orçamento para impressão
-    const htmlContent = generateQuoteHTML(quote, companyData)
-    const fileName = `orcamento-${quote.id}-${Date.now()}.html`
+    console.log('Company data:', companyData)
 
-    // Retornar HTML otimizado para impressão
-    return new NextResponse(htmlContent, {
+    // Gerar HTML do orçamento
+    const html = generateQuoteHTML(quote, companyData)
+    console.log('Generated HTML length:', html.length)
+
+    // Configurar Puppeteer
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ]
+    })
+
+    const page = await browser.newPage()
+    
+    // Adicionar logs de console da página
+    page.on('console', (msg) => {
+      console.log('PAGE LOG:', msg.text())
+    })
+    
+    page.on('pageerror', (error) => {
+      console.error('PAGE ERROR:', error)
+    })
+    
+    await page.setContent(html, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000
+    })
+    
+    console.log('Page content set successfully')
+    
+    // Gerar PDF
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px'
+      },
+      timeout: 30000
+    })
+
+    console.log('PDF generated successfully, size:', pdf.length)
+    
+    await browser.close()
+
+    // Retornar PDF
+    return new NextResponse(pdf, {
       headers: {
-        "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="${fileName}"`
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="orcamento-${quote.id}.pdf"`
       }
     })
   } catch (error) {
     console.error("Erro ao gerar orçamento:", error)
+    if (error instanceof Error) {
+      console.error('Error stack:', error.stack)
+    }
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
-    return NextResponse.json({ error: "Erro ao gerar orçamento: " + errorMessage }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Erro ao gerar orçamento: " + errorMessage,
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    }, { status: 500 })
   }
 }
 
