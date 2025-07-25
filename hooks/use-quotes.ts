@@ -88,8 +88,7 @@ export function useQuotes() {
           total_price: unitPrice * quantity,
         }
       })
-
-      const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
+const subtotal = items.reduce((sum, item) => sum + item.total_price, 0)
       const discountAmount = formData.discount_amount || 0
       const total = subtotal - discountAmount
 

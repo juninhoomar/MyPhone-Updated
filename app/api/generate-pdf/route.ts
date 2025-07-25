@@ -371,7 +371,7 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
       <div class="totals">
         <div class="total-row">
           <span>Subtotal:</span>
-          <span>${formatCurrency(quote.subtotal)}</span>
+          <span>${formatCurrency(quote.items.reduce((sum, item) => sum + item.total_price, 0))}</span>
         </div>
         ${quote.discount_amount && quote.discount_amount > 0 ? `
           <div class="total-row">
@@ -381,7 +381,7 @@ function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
         ` : ''}
         <div class="total-row total-final">
           <span>TOTAL GERAL:</span>
-          <span>${formatCurrency(quote.total)}</span>
+          <span>${formatCurrency((quote.items.reduce((sum, item) => sum + item.total_price, 0)) - (quote.discount_amount || 0))}</span>
         </div>
       </div>
 
