@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAppSettings } from "@/hooks/use-app-settings"
+import { useCompanySettings } from "@/hooks/use-company-settings"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,9 +31,12 @@ import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { settings, updateSettings, resetSettings, isLoading } = useAppSettings()
+  const { companyData, updateCompanyData, resetCompanyData, isLoading: isLoadingCompany } = useCompanySettings()
   const [showApiKey, setShowApiKey] = useState(false)
   const [tempSettings, setTempSettings] = useState(settings)
+  const [tempCompanyData, setTempCompanyData] = useState(companyData)
   const [hasChanges, setHasChanges] = useState(false)
+  const [hasCompanyChanges, setHasCompanyChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSettingChange = (key: keyof typeof settings, value: any) => {
@@ -41,11 +45,26 @@ export default function SettingsPage() {
     setHasChanges(true)
   }
 
+  const handleCompanyChange = (key: string, value: any) => {
+    setTempCompanyData(prev => ({ ...prev, [key]: value }))
+    setHasCompanyChanges(true)
+  }
+
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await updateSettings(tempSettings)
-      setHasChanges(false)
+      // Salva configurações gerais se houver mudanças
+      if (hasChanges) {
+        await updateSettings(tempSettings)
+        setHasChanges(false)
+      }
+      
+      // Salva dados da empresa se houver mudanças
+      if (hasCompanyChanges) {
+        await updateCompanyData(tempCompanyData)
+        setHasCompanyChanges(false)
+      }
+      
       toast({
         title: "Configurações salvas",
         description: "Suas configurações foram salvas com sucesso!",
@@ -65,8 +84,11 @@ export default function SettingsPage() {
     setIsSaving(true)
     try {
       await resetSettings()
+      await resetCompanyData()
       setTempSettings(settings)
+      setTempCompanyData(companyData)
       setHasChanges(false)
+      setHasCompanyChanges(false)
       toast({
         title: "Configurações resetadas",
         description: "Todas as configurações foram restauradas para o padrão.",
@@ -94,7 +116,12 @@ export default function SettingsPage() {
     }
   }, [settings, isLoading])
 
-  if (isLoading) {
+  useEffect(() => {
+    setTempCompanyData(companyData)
+    setHasCompanyChanges(false)
+  }, [companyData])
+
+  if (isLoading || isLoadingCompany) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -120,7 +147,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {hasChanges && (
+        {(hasChanges || hasCompanyChanges) && (
           <div className="flex gap-2">
             <Button 
               variant="outline" 
@@ -131,7 +158,7 @@ export default function SettingsPage() {
             </Button>
             <Button 
               onClick={handleSave}
-              disabled={isSaving || isLoading}
+              disabled={(!hasChanges && !hasCompanyChanges) || isSaving || isLoading}
             >
               <Save className="w-4 h-4 mr-2" />
               {isSaving ? "Salvando..." : "Salvar Alterações"}
@@ -357,22 +384,32 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="companyName">Nome da Empresa</Label>
-                  <Input
-                    id="companyName"
-                    value={tempSettings.companyName}
-                    onChange={(e) => handleSettingChange("companyName", e.target.value)}
-                    placeholder="Sua Empresa Ltda"
-                  />
-                </div>
+                    <Label htmlFor="companyName">Nome da Empresa</Label>
+                    <Input
+                      id="companyName"
+                      value={tempCompanyData.name || ""}
+                      onChange={(e) => handleCompanyChange("name", e.target.value)}
+                      placeholder="Sua Empresa Ltda"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="companyCnpj">CNPJ</Label>
+                    <Input
+                      id="companyCnpj"
+                      value={tempCompanyData.cnpj || ""}
+                      onChange={(e) => handleCompanyChange("cnpj", e.target.value)}
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="companyEmail">E-mail</Label>
                   <Input
                     id="companyEmail"
                     type="email"
-                    value={tempSettings.companyEmail}
-                    onChange={(e) => handleSettingChange("companyEmail", e.target.value)}
+                    value={tempCompanyData.email || ""}
+                    onChange={(e) => handleCompanyChange("email", e.target.value)}
                     placeholder="contato@suaempresa.com"
                   />
                 </div>
@@ -381,8 +418,8 @@ export default function SettingsPage() {
                   <Label htmlFor="companyPhone">Telefone</Label>
                   <Input
                     id="companyPhone"
-                    value={tempSettings.companyPhone}
-                    onChange={(e) => handleSettingChange("companyPhone", e.target.value)}
+                    value={tempCompanyData.phone || ""}
+                    onChange={(e) => handleCompanyChange("phone", e.target.value)}
                     placeholder="(11) 99999-9999"
                   />
                 </div>
@@ -394,8 +431,8 @@ export default function SettingsPage() {
                     type="number"
                     min="0"
                     max="100"
-                    value={tempSettings.defaultDiscount}
-                    onChange={(e) => handleSettingChange("defaultDiscount", Number(e.target.value))}
+                    value={tempCompanyData.defaultDiscount || 0}
+                    onChange={(e) => handleCompanyChange("defaultDiscount", Number(e.target.value))}
                     placeholder="0"
                   />
                 </div>
@@ -405,8 +442,8 @@ export default function SettingsPage() {
                 <Label htmlFor="companyAddress">Endereço</Label>
                 <Textarea
                   id="companyAddress"
-                  value={tempSettings.companyAddress}
-                  onChange={(e) => handleSettingChange("companyAddress", e.target.value)}
+                  value={tempCompanyData.address || ""}
+                  onChange={(e) => handleCompanyChange("address", e.target.value)}
                   placeholder="Rua Example, 123 - Bairro - Cidade/UF - CEP 00000-000"
                   rows={3}
                 />

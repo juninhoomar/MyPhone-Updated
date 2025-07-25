@@ -3,12 +3,26 @@ import { createClient } from '@supabase/supabase-js'
 import { Quote } from '@/types/quote'
 import puppeteer from 'puppeteer'
 
-// Dados da empresa (normalmente viriam de um banco de dados ou configuração)
-const COMPANY_DATA = {
+interface CompanyData {
+  name: string
+  cnpj?: string
+  address?: string
+  city?: string
+  state?: string
+  cep?: string
+  phone?: string
+  email?: string
+  website?: string
+  logo_url?: string
+}
+
+// Dados padrão da empresa (fallback)
+const DEFAULT_COMPANY_DATA: CompanyData = {
   name: "MyPhone Tecnologia",
   cnpj: "12.345.678/0001-90",
   address: "Rua das Tecnologias, 123",
-  city: "São Paulo - SP",
+  city: "São Paulo",
+  state: "SP",
   cep: "01234-567",
   phone: "(11) 99999-9999",
   email: "contato@myphone.com.br",
@@ -32,8 +46,35 @@ export async function POST(request: NextRequest) {
     // Usar os dados do orçamento fornecidos
     const quote = quoteData as Quote
 
+    // Buscar dados da empresa do banco de dados
+    let companyData = DEFAULT_COMPANY_DATA
+    try {
+      const { data: company, error } = await supabase
+        .from('company')
+        .select('*')
+        .limit(1)
+        .single()
+      
+      if (!error && company) {
+        companyData = {
+          name: company.name,
+          cnpj: company.cnpj,
+          address: company.address,
+          city: company.city,
+          state: company.state,
+          cep: company.cep,
+          phone: company.phone,
+          email: company.email,
+          website: company.website,
+          logo_url: company.logo_url
+        }
+      }
+    } catch (dbError) {
+      console.warn('Erro ao buscar dados da empresa, usando dados padrão:', dbError)
+    }
+
     // Gerar HTML do orçamento
-    const htmlContent = generateQuoteHTML(quote)
+    const htmlContent = generateQuoteHTML(quote, companyData)
 
     // Gerar PDF usando Puppeteer
     let browser
@@ -101,7 +142,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateQuoteHTML(quote: Quote): string {
+function generateQuoteHTML(quote: Quote, companyData: CompanyData): string {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', {
       style: 'currency',
@@ -242,11 +283,11 @@ function generateQuoteHTML(quote: Quote): string {
     <body>
       <div class="header">
         <div class="company-info">
-          <div class="company-name">${COMPANY_DATA.name}</div>
+          <div class="company-name">${companyData.name}</div>
           <div class="company-details">
-            ${COMPANY_DATA.address}, ${COMPANY_DATA.city} - ${COMPANY_DATA.cep}<br>
-            CNPJ: ${COMPANY_DATA.cnpj} | Tel: ${COMPANY_DATA.phone}<br>
-            Email: ${COMPANY_DATA.email} | Site: ${COMPANY_DATA.website}
+            ${companyData.address}, ${companyData.city} - ${companyData.cep}<br>
+            CNPJ: ${companyData.cnpj} | Tel: ${companyData.phone}<br>
+            Email: ${companyData.email} | Site: ${companyData.website}
           </div>
         </div>
       </div>
@@ -324,7 +365,7 @@ function generateQuoteHTML(quote: Quote): string {
       <div class="signature">
         <div class="signature-line"></div>
         <div style="font-size: 12px; margin-top: 10px;">
-          <strong>${COMPANY_DATA.name}</strong><br>
+          <strong>${companyData.name}</strong><br>
           Assinatura e Carimbo
         </div>
       </div>
